@@ -1,0 +1,20 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Document</title>
+</head>
+<body>
+    <h2>Thanh toán</h2>
+
+<h3>{{ product[1] }}</h3>
+<p>Giá: {{ product[2] }}</p>
+<p>Tồn kho: {{ product[3] }}</p>
+
+<form method="POST" action="{{ url_for('process_payment', product_id=product[0]) }}">
+    <input type="number" name="quantity" min="1" placeholder="Số lượng">
+    <button type="submit">Thanh toán</button>
+</form>
+</body>
+</html>
