@@ -29,7 +29,6 @@ def register():
         password = request.form["password"]
         repassword = request.form["repassword"]
 
-        # kiểm tra trùng username
         cursor.execute("SELECT * FROM Users WHERE username = ?", (username,))
         user = cursor.fetchone()
 
@@ -39,7 +38,6 @@ def register():
             return "mật khẩu không trùng khớp"
 
 
-        # insert nếu chưa tồn tại
         cursor.execute("""
             INSERT INTO Users (username, password, role)
             VALUES (?, ?, ?)
@@ -96,6 +94,18 @@ def add_product():
         return redirect(url_for("home"))
 
     return render_template("addproduct.html")
+
+@app.route("/delete/<int:product_id>")
+def delete(product_id):
+
+        cursor.execute("""
+            DELETE FROM Products
+            WHERE product_id = ?
+        """, (product_id,))
+        conn.commit()
+
+        return redirect(url_for("home"))
+
 
 @app.route("/checkout/<int:product_id>")
 def checkout(product_id):
