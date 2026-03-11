@@ -95,6 +95,26 @@ def add_product():
 
     return render_template("addproduct.html")
 
+@app.route("/edit/<int:product_id>", methods=["GET", "POST"])
+def edit(product_id):
+    if request.method == "POST":
+        name = request.form["name"]
+        price = request.form["price"]
+        stock = request.form["stock"]
+
+        cursor.execute("""
+            UPDATE Products
+            SET name = ? AND price = ? AND stock = ?
+            WHERE product_id = ?
+        """, (name, price, stock, product_id,))
+        conn.commit()
+
+        return redirect(url_for("admin"))
+    cursor.execute("SELECT * FROM Products WHERE product_id = ?", (product_id,))
+    product = cursor.fetchone()
+
+    return render_template("edit.html", product=product)
+
 @app.route("/delete/<int:product_id>")
 def delete(product_id):
 

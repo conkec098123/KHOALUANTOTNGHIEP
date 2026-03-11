@@ -16,8 +16,8 @@
         {{ p[1] }} - 
         Giá: {{ p[2] }} - 
         Tồn kho: {{ p[3] }}
-        <a href="{{ url_for('edit') }}">edit</a>
-        <a href="/delete/{{ p[0] }}">delete</a>
+        <a href="{{ url_for('edit', product_id=p[0]) }}">edit</a>
+        <a href="{{ url_for('delete', product_id=p[0]) }}">delete</a>
     </p>
 {% else %}
     <p>
