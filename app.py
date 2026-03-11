@@ -47,9 +47,38 @@ def register():
 
         conn.commit()
 
-        return redirect(url_for("login.html"))
+        return redirect(url_for("login"))
 
     return render_template("register.html")
+
+@app.route("/login", methods=["GET", "POST"])
+def login():
+    if request.method == "POST":
+        username = request.form["username"]
+        password = request.form["password"]
+
+        cursor.execute("""
+            SELECT * FROM Users
+            WHERE username = ? AND password = ?
+        """, (username, password))
+
+        user = cursor.fetchone()
+
+        if user:
+            if user.role == "admin":
+                return redirect(url_for("admin"))
+            else:
+                return redirect(url_for("home"))
+        else:
+            return "Sai tài khoản hoặc mật khẩu"
+
+    return render_template("login.html")
+
+@app.route("/admin")
+def admin():
+    cursor.execute("SELECT * FROM Products")
+    products = cursor.fetchall()
+    return render_template("admin.html", products=products)
 
 @app.route("/add_product", methods=["GET", "POST"])
 def add_product():
@@ -83,7 +112,7 @@ def process_payment(product_id):
     cursor.execute("SELECT stock FROM Products WHERE product_id = ?", product_id)
     stock = cursor.fetchone()[0]
 
-    if int(quantity) >= stock:
+    if int(quantity) > stock:
         return "Không đủ hàng"
 
     # Trừ tồn kho
