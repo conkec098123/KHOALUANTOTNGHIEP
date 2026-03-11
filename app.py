@@ -1,7 +1,8 @@
-from flask import Flask, render_template, url_for, request, redirect
+from flask import Flask, render_template, url_for, request, redirect, session
 import pyodbc
 
 app = Flask(__name__)
+app.secret_key = "abc123"
 
 server = 'localhost'
 database = 'KHOALUANTOTNGHIEP'
@@ -66,6 +67,7 @@ def login():
             if user.role == "admin":
                 return redirect(url_for("admin"))
             else:
+                session["users_id"] = user[0]
                 return redirect(url_for("home"))
         else:
             return "Sai tài khoản hoặc mật khẩu"
@@ -126,7 +128,6 @@ def delete(product_id):
 
         return redirect(url_for("home"))
 
-
 @app.route("/checkout/<int:product_id>")
 def checkout(product_id):
     cursor.execute("SELECT * FROM Products WHERE product_id = ?", product_id)
@@ -136,14 +137,33 @@ def checkout(product_id):
 
 @app.route("/process_payment/<int:product_id>", methods=["POST"])
 def process_payment(product_id):
-    quantity = request.form["quantity"]
+    quantity = int(request.form["quantity"])
+    users_id = session["users_id"]
 
     # Lấy tồn kho hiện tại
-    cursor.execute("SELECT stock FROM Products WHERE product_id = ?", product_id)
-    stock = cursor.fetchone()[0]
+    cursor.execute("SELECT price, stock FROM Products WHERE product_id = ?", (product_id,))
+    product = cursor.fetchone()
+
+    price = product[0]
+    stock = product[1]
 
     if int(quantity) > stock:
         return "Không đủ hàng"
+    
+    total = price * quantity
+    
+    cursor.execute("""
+        INSERT INTO Orders (users_id, total_price)
+        VALUES (?, ?)
+    """, (users_id, total))   
+
+    cursor.execute("SELECT @@IDENTITY")
+    order_id = cursor.fetchone()[0]
+
+    cursor.execute("""
+        INSERT INTO Order_Details (order_id, product_id, quantity, price)
+        VALUES (?, ?, ?, ?)
+    """, (order_id, product_id, quantity, price))
 
     # Trừ tồn kho
     cursor.execute("""
