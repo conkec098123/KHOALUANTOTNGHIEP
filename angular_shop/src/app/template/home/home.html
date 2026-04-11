@@ -1,0 +1,11 @@
+<p>welcome: {{ full_name() }}</p>
+@for (product of products(); track product.id) {
+  <div>
+    <p>{{ product.name }}</p>
+    <p>Giá: {{ product.price }}</p>
+    <p>Sau giảm: {{ product.discount_price }}</p>
+    <p>Tồn kho: {{ product.qty }}</p>
+
+    <button (click)="addToCart(product.name)">Thêm giỏ</button>
+  </div>
+}

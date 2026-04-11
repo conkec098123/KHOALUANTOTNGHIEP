@@ -1,8 +1,11 @@
-from flask import Flask, render_template, url_for, request, redirect, session
+from flask import Flask, render_template, url_for, request, redirect, session, jsonify
 import pyodbc
+from flask_cors import CORS
+from flask import jsonify   
 
 app = Flask(__name__)
 app.secret_key = "abc123"
+CORS(app, supports_credentials=True, origins=["http://localhost:4200"])
 
 server = 'localhost'
 database = 'KHOALUANTOTNGHIEP'
@@ -22,6 +25,40 @@ def home():
     cursor.execute("SELECT * FROM Products")
     products = cursor.fetchall()
     return render_template("index.html", products=products)
+
+@app.route("/api/products")
+def api_products():
+    cursor.execute("""
+        SELECT product_id, name, price, discount_price, qty
+        FROM Product
+    """)
+
+    products = cursor.fetchall()
+
+    data = []
+
+    for p in products:
+        data.append({
+            "id": p[0],
+            "name": p[1],
+            "price": float(p[2]),
+            "discount_price": p[3] if p[3] is not None else 0,
+            "qty": p[4]
+        })
+
+    return jsonify(data)
+
+@app.route("/api/current-user")
+def current_user():
+    if "user_id" in session:
+        print(session)
+        cursor.execute("SELECT full_name FROM Customer WHERE customer_id = ?", (session["user_id"],))
+        user = cursor.fetchone()
+
+        if user:
+            return {"name": user[0]}
+
+    return {"name": "Guest"}
 
 @app.route("/register", methods=["GET", "POST"])
 def register():
@@ -57,20 +94,29 @@ def login():
         password = request.form["password"]
 
         cursor.execute("""
-            SELECT * FROM Users
+            SELECT * FROM [User]
             WHERE username = ? AND password = ?
         """, (username, password))
+        admin = cursor.fetchone()
 
-        user = cursor.fetchone()
+        if admin:
+            session["user_id"] = admin[0]  
+            session["role"] = "admin"
+            return redirect("http://localhost:4200/admin")  
 
-        if user:
-            if user.role == "admin":
-                return redirect(url_for("admin"))
-            else:
-                session["users_id"] = user[0]
-                return redirect(url_for("home"))
-        else:
-            return "Sai tài khoản hoặc mật khẩu"
+        # Kiểm tra trong bảng Customer (khách)
+        cursor.execute("""
+            SELECT * FROM Customer
+            WHERE full_name = ? AND password = ?
+        """, (username, password))
+        customer = cursor.fetchone()
+
+        if customer:
+            session["user_id"] = customer[0]
+            session["role"] = "user"
+            return redirect("http://localhost:4200/")
+
+        return "Sai tài khoản hoặc mật khẩu"
 
     return render_template("login.html")
 
@@ -80,42 +126,77 @@ def admin():
     products = cursor.fetchall()
     return render_template("admin.html", products=products)
 
-@app.route("/add_product", methods=["GET", "POST"])
+@app.route("/admin/orders")
+def adminorders():
+
+    cursor.execute("""
+        SELECT O.order_id, U.username, O.total_price, O.order_date
+        FROM Orders O
+        JOIN Users U ON O.users_id = U.users_id
+    """)
+
+    orders = cursor.fetchall()
+
+    return render_template("adminorders.html", orders=orders)
+
+@app.route("/admin/order/<int:order_id>")
+def order_detail(order_id):
+
+    cursor.execute("""
+        SELECT P.name, OD.quantity, OD.price
+        FROM Order_Details OD
+        JOIN Products P ON OD.product_id = P.product_id
+        WHERE OD.order_id = ?
+    """, (order_id,))
+
+    details = cursor.fetchall()
+
+    return render_template("orderdetails.html", details=details)
+
+@app.route("/add_product", methods=["POST"])
 def add_product():
-    if request.method == "POST":
-        name = request.form["name"]
-        price = request.form["price"]
-        stock = request.form["stock"]
+    data = request.json  
+    name = data.get("name")
+    price = data.get("price")
+    qty = data.get("qty")
 
-        cursor.execute("""
-            INSERT INTO Products (name, price, stock)
-            VALUES (?, ?, ?)
-        """, (name, price, stock))
-        conn.commit()
+    cursor.execute("""
+        INSERT INTO Product (name, price, qty)
+        VALUES (?, ?, ?)
+    """, (name, price, qty))
+    conn.commit()
 
-        return redirect(url_for("home"))
+    return jsonify({"message": "Thêm sản phẩm thành công"})
 
-    return render_template("addproduct.html")
+@app.route("/api/products/<int:id>")
+def get_product(id):
+    cursor.execute("SELECT product_id, name, price, discount_price, qty FROM Product WHERE product_id = ?", (id,))
+    p = cursor.fetchone()
 
-@app.route("/edit/<int:product_id>", methods=["GET", "POST"])
-def edit(product_id):
-    if request.method == "POST":
-        name = request.form["name"]
-        price = request.form["price"]
-        stock = request.form["stock"]
+    return jsonify({
+        "product_id": p[0],
+        "name": p[1],
+        "price": float(p[2] or 0),
+        "qty": int(p[4] or 0)
+    })
 
-        cursor.execute("""
-            UPDATE Products
-            SET name = ? AND price = ? AND stock = ?
-            WHERE product_id = ?
-        """, (name, price, stock, product_id,))
-        conn.commit()
+@app.route("/api/products/<int:id>", methods=["PUT"])
+def update_product(id):
+    data = request.get_json()
 
-        return redirect(url_for("admin"))
-    cursor.execute("SELECT * FROM Products WHERE product_id = ?", (product_id,))
-    product = cursor.fetchone()
+    name = data.get("name")
+    price = float(data.get("price"))
+    qty = int(data.get("qty"))
 
-    return render_template("edit.html", product=product)
+    cursor.execute("""
+        UPDATE Product
+        SET name = ?, price = ?, qty = ?
+        WHERE product_id = ?
+    """, (name, price, qty, id))
+
+    conn.commit()
+
+    return jsonify({"message": "Cập nhật thành công"})
 
 @app.route("/delete/<int:product_id>")
 def delete(product_id):
@@ -127,6 +208,13 @@ def delete(product_id):
         conn.commit()
 
         return redirect(url_for("home"))
+
+@app.route("/api/products/<int:id>", methods=["DELETE"])
+def delete_product(id):
+    cursor.execute("DELETE FROM Product WHERE product_id = ?", (id,))
+    conn.commit()
+
+    return jsonify({"message": "Xóa thành công"})
 
 @app.route("/checkout/<int:product_id>")
 def checkout(product_id):

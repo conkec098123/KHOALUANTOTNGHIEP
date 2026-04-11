@@ -1,0 +1,24 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Document</title>
+</head>
+
+<body>
+    <h2>Danh sách đơn hàng</h2>
+
+    {% for o in orders %}
+    <p>
+        Order ID: {{ o[0] }} |
+        User: {{ o[1] }} |
+        Total: {{ o[3] }}
+
+        <a href="/admin/order/{{ o[0] }}">Xem chi tiết</a>
+    </p>
+    {% endfor %}
+</body>
+
+</html>

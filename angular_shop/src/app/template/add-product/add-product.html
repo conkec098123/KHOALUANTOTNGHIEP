@@ -1,0 +1,18 @@
+<div class="container mt-5">
+  <h2>Thêm sản phẩm mới</h2>
+  <form (ngSubmit)="submit()">
+    <div class="mb-3">
+      <label class="form-label">Tên sản phẩm</label>
+      <input type="text" class="form-control" [(ngModel)]="name" name="name" required>
+    </div>
+    <div class="mb-3">
+      <label class="form-label">Giá</label>
+      <input type="number" class="form-control" [(ngModel)]="price" name="price" required>
+    </div>
+    <div class="mb-3">
+      <label class="form-label">Số lượng</label>
+      <input type="number" class="form-control" [(ngModel)]="qty" name="qty" required>
+    </div>
+    <button type="submit" class="btn btn-success">Thêm sản phẩm</button>
+  </form>
+</div>
