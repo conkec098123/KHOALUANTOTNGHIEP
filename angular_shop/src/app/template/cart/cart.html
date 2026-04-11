@@ -1,1 +1,17 @@
-<p>cart works!</p>
+<h2>Giỏ hàng</h2>
+
+@for (item of cartService.cart(); track item.id) {
+  <div>
+    <p>{{ item.name }}</p>
+    <p>Số lượng: {{ item.qty }}</p>
+    <p>Giá: {{ item.price }}</p>
+
+    <button (click)="cartService.increase(item)">+</button>
+    <button (click)="cartService.decrease(item)">-</button>
+    <button (click)="cartService.remove(item.id)">Xóa</button>
+  </div>
+}
+
+<p><b>Tổng: {{ cartService.getTotal() }}</b></p>
+
+<button (click)="checkout()">Thanh toán</button>

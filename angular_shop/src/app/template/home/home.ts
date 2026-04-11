@@ -1,6 +1,7 @@
 import { HttpClient, HttpClientModule } from '@angular/common/http';
 import { Component, OnInit, signal } from '@angular/core';
 import { RouterLink, RouterOutlet } from '@angular/router';
+import { CartService } from '../services/cart';
 
 @Component({
   selector: 'app-home',
@@ -17,7 +18,11 @@ export class Home implements OnInit{
 
   cart = signal<string[]>([]);
 
-  constructor(private http: HttpClient) {}
+  constructor(private http: HttpClient, private cartService: CartService) {}
+
+  addToCart(product: any) {
+  this.cartService.addToCart(product);
+  }
 
   ngOnInit() {
     this.http.get<any[]>('http://127.0.0.1:5000/api/products', { withCredentials: true })
@@ -30,9 +35,5 @@ export class Home implements OnInit{
         console.log(data);
         this.full_name.set(data.name);
       });
-  }
-
-  addToCart(productName: string) {
-    this.cart.update(items => [...items, productName]);
   }
 }
