@@ -4,7 +4,7 @@
   <div>
     <p>{{ item.name }}</p>
     <p>Số lượng: {{ item.qty }}</p>
-    <p>Giá: {{ item.price }}</p>
+    <p>Giá: {{ item.discount_price }}</p>
 
     <button (click)="cartService.increase(item)">+</button>
     <button (click)="cartService.decrease(item)">-</button>

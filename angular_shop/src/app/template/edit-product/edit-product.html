@@ -1,7 +1,8 @@
 <form (ngSubmit)="submit()">
   <input [(ngModel)]="name" name="name" placeholder="Tên sản phẩm" class="form-control mb-2">
   <input [(ngModel)]="price" name="price" type="number" class="form-control mb-2">
+  <input [(ngModel)]="discount_price" name="discount_price" type="number" class="form-control mb-2">
   <input [(ngModel)]="qty" name="qty" type="number" class="form-control mb-2">
-
+  
   <button class="btn btn-warning">Cập nhật</button>
 </form>

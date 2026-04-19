@@ -1,16 +1,20 @@
 <a class="nav-link" [routerLink]="['/add-product']">add-product</a>
 @for (product of products(); track product.id) {
-  <div>
-    <p>ID: {{ product.id }}</p>
-    <p>{{ product.name }}</p>
-    <p>Giá: {{ product.price }}</p>
-    <p>Sau giảm: {{ product.discount_price }}</p>
-    <p>Tồn kho: {{ product.qty }}</p>
-
+   <div class="card m-2 p-2" style="width: 200px; display:inline-block">
     
-    <button (click)="goToEdit(product.id)">edit-product</button>
-    <button (click)="deleteProduct(product.id)">
-  Xóa
-</button>
+    <img [src]="product.image" width="100">
+    <p>{{ product.image }}</p>
+
+    <div class="card-body">
+      <h5>{{ product.name }}</h5>
+      <p class="strikeout">Giá: {{ product.price }}</p>
+      <p>Giá: {{ product.discount_price }}</p>
+      <p>Tồn kho: {{ product.qty }}</p>
+
+      <button (click)="goToEdit(product.id)">edit-product</button>
+      <button (click)="deleteProduct(product.id)">Xóa</button>
+    </div>
+
   </div>
 }
+

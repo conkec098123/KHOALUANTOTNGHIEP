@@ -1,11 +1,12 @@
 import { HttpClient, HttpClientModule } from '@angular/common/http';
 import { Component, OnInit, signal } from '@angular/core';
-import { RouterLink, RouterOutlet } from '@angular/router';
+import { Router, RouterLink, RouterOutlet } from '@angular/router';
 import { CartService } from '../services/cart';
+import { DecimalPipe } from '@angular/common';
 
 @Component({
   selector: 'app-home',
-  imports: [HttpClientModule, RouterLink],
+  imports: [HttpClientModule, RouterLink, DecimalPipe],
   templateUrl: './home.html',
   styleUrl: './home.css',
 })
@@ -18,10 +19,15 @@ export class Home implements OnInit{
 
   cart = signal<string[]>([]);
 
-  constructor(private http: HttpClient, private cartService: CartService) {}
+  constructor(private http: HttpClient, private cartService: CartService, private router: Router) {}
 
   addToCart(product: any) {
   this.cartService.addToCart(product);
+  }
+
+  viewDetail(product: any) {
+    this.router.navigate(['/product', product.id]);
+    console.log('CLICK OK', product);
   }
 
   ngOnInit() {

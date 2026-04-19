@@ -14,6 +14,7 @@ export class EditProduct {
   id!: number;
   name = '';
   price: number = 0;
+  discount_price: number = 0;
   qty: number = 0;
 
   constructor(
@@ -30,6 +31,7 @@ export class EditProduct {
       .subscribe(data => {
         this.name = data.name;
         this.price = data.price;
+        this.discount_price = data.discount_price;
         this.qty = data.qty;
       });
   }
@@ -38,6 +40,7 @@ export class EditProduct {
     this.http.put(`http://127.0.0.1:5000/api/products/${this.id}`, {
       name: this.name,
       price: this.price,
+      discount_price: this.discount_price,
       qty: this.qty
     }).subscribe(() => {
       this.router.navigate(['/admin']);

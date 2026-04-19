@@ -5,3 +5,7 @@ body {
 button {
   margin-bottom: 10px;
 }
+
+.logo{
+  color: red;
+}

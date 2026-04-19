@@ -3,7 +3,7 @@ import pyodbc
 from flask_cors import CORS
 from flask import jsonify   
 
-app = Flask(__name__)
+app = Flask(__name__, static_folder='static')
 app.secret_key = "abc123"
 CORS(app, supports_credentials=True, origins=["http://localhost:4200"])
 
@@ -29,7 +29,7 @@ def home():
 @app.route("/api/products")
 def api_products():
     cursor.execute("""
-        SELECT product_id, name, price, discount_price, qty
+        SELECT product_id, name, price, discount_price, image, qty
         FROM Product
     """)
 
@@ -43,22 +43,43 @@ def api_products():
             "name": p[1],
             "price": float(p[2]),
             "discount_price": p[3] if p[3] is not None else 0,
-            "qty": p[4]
+            "image": p[4],
+            "qty": p[5]
         })
 
     return jsonify(data)
 
-@app.route("/api/current-user")
+@app.route('/api/current-user')
 def current_user():
-    if "user_id" in session:
-        print(session)
-        cursor.execute("SELECT full_name FROM Customer WHERE customer_id = ?", (session["user_id"],))
+
+    # 👉 nếu là admin
+    if 'user_id' in session:
+        user_id = session['user_id']
+
+        cursor.execute("SELECT username FROM [User] WHERE user_id = ?", user_id)
         user = cursor.fetchone()
 
-        if user:
-            return {"name": user[0]}
+        return jsonify({
+            "name": user.username,
+            "role": "admin"
+        })
 
-    return {"name": "Guest"}
+    # 👉 nếu là customer
+    elif 'customer_id' in session:
+        customer_id = session['customer_id']
+
+        cursor.execute("SELECT fullname FROM Customer WHERE customer_id = ?", customer_id)
+        customer = cursor.fetchone()
+
+        return jsonify({
+            "name": customer.fullname,
+            "role": "customer"
+        })
+
+    return jsonify({
+        "name": "Guest",
+        "role": "guest"
+    })
 
 @app.route("/register", methods=["GET", "POST"])
 def register():
@@ -100,7 +121,7 @@ def login():
         admin = cursor.fetchone()
 
         if admin:
-            session["user_id"] = admin[0]  
+            session["user_id"] = admin[0]   
             session["role"] = "admin"
             return redirect("http://localhost:4200/admin")  
 
@@ -112,9 +133,11 @@ def login():
         customer = cursor.fetchone()
 
         if customer:
-            session["user_id"] = customer[0]
-            session["role"] = "user"
+            session["customer_id"] = customer[0]
+            session["role"] = "customer"
             return redirect("http://localhost:4200/")
+        
+        print(session)
 
         return "Sai tài khoản hoặc mật khẩu"
 
@@ -177,6 +200,7 @@ def get_product(id):
         "product_id": p[0],
         "name": p[1],
         "price": float(p[2] or 0),
+        "discount_price": float(p[2] or 0),
         "qty": int(p[4] or 0)
     })
 
@@ -186,28 +210,61 @@ def update_product(id):
 
     name = data.get("name")
     price = float(data.get("price"))
+    discount_price = float(data.get("discount_price"))
     qty = int(data.get("qty"))
 
     cursor.execute("""
         UPDATE Product
-        SET name = ?, price = ?, qty = ?
+        SET name = ?, price = ?, discount_price = ?, qty = ?
         WHERE product_id = ?
-    """, (name, price, qty, id))
+    """, (name, price, discount_price, qty, id))
 
     conn.commit()
 
     return jsonify({"message": "Cập nhật thành công"})
 
-@app.route("/delete/<int:product_id>")
-def delete(product_id):
+@app.route('/api/product/<int:id>', methods=['GET'])
+def get_product_detail(id):
+    query = """
+    SELECT 
+        p.product_id,
+        p.name,
+        p.price,
+        p.discount_price,
+        p.image,
 
-        cursor.execute("""
-            DELETE FROM Products
-            WHERE product_id = ?
-        """, (product_id,))
-        conn.commit()
+        MAX(CASE WHEN a.name = 'CPU' THEN pa.value END) AS cpu,
+        MAX(CASE WHEN a.name = 'RAM' THEN pa.value END) AS ram,
+        MAX(CASE WHEN a.name = 'SSD' THEN pa.value END) AS ssd
 
-        return redirect(url_for("home"))
+    FROM Product p
+    LEFT JOIN ProductAttribute pa ON p.product_id = pa.product_id
+    LEFT JOIN Attribute a ON pa.attribute_id = a.attribute_id
+
+    WHERE p.product_id = ?
+
+    GROUP BY 
+        p.product_id, p.name, p.price, p.discount_price, p.image
+    """
+
+    cursor.execute(query, id)
+    row = cursor.fetchone()
+
+    if not row:
+        return jsonify({"message": "Product not found"}), 404
+
+    product = {
+        "id": row.product_id,
+        "name": row.name,
+        "price": float(row.price) if row.price else 0,
+        "discount_price": float(row.discount_price) if row.discount_price else 0,
+        "image": row.image,
+        "cpu": row.cpu,
+        "ram": row.ram,
+        "ssd": row.ssd
+    }
+
+    return jsonify(product)
 
 @app.route("/api/products/<int:id>", methods=["DELETE"])
 def delete_product(id):

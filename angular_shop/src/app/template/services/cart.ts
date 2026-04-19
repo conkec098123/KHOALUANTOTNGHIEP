@@ -43,7 +43,7 @@ export class CartService {
   }
 
   getTotal() {
-    return this.cart().reduce((sum, item) => sum + item.price * item.qty, 0);
+    return this.cart().reduce((sum, item) => sum + item.discount_price * item.qty, 0);
   }
 
   clear() {

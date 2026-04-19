@@ -1,11 +1,51 @@
-<p>welcome: {{ full_name() }}</p>
-@for (product of products(); track product.id) {
-  <div>
-    <p>{{ product.name }}</p>
-    <p>Giá: {{ product.price }}</p>
-    <p>Sau giảm: {{ product.discount_price }}</p>
-    <p>Tồn kho: {{ product.qty }}</p>
+<div class="container mt-3">
+  <div class="row">
 
-    <button (click)="addToCart(product)">Thêm giỏ</button>
+    <div class="mb-3">WELCOME: {{ full_name() }}</div>
+
+    <!-- LEFT: FILTER -->
+    <div class="col-3">
+      <div class="card p-3">
+        <h5>Bộ lọc</h5>
+        <p>Giá</p>
+        <p>Hãng</p>
+        <p>RAM</p>
+      </div>
+    </div>
+
+    <!-- RIGHT -->
+    <div class="col-9">
+
+      <div class="card p-3 mb-3">
+        <h5>Chọn theo nhu cầu</h5>
+        <button class="btn btn-outline-primary m-1">Gaming</button>
+        <button class="btn btn-outline-primary m-1">Văn phòng</button>
+        <button class="btn btn-outline-primary m-1">Sinh viên</button>
+      </div>
+
+      <!-- PRODUCTS -->
+      <div class="row">
+        @for (product of products(); track product.id) {
+        <div class="col-4 mb-3">
+          <div class="card p-2">
+
+            <img [src]="product.image" class="card-img-top">
+
+            <div class="card-body">
+              <h6>{{ product.name }}</h6>
+              <p class="strikeout">Giá: {{ product.price | number:'1.0-0' }} đ</p>
+              <p>Giảm: {{ product.discount_price | number:'1.0-0' }} đ</p>
+
+              <button class="btn btn-primary" (click)="addToCart(product)">Thêm</button>
+              <button class="btn btn-primary ms-3" (click)="viewDetail(product)">Xem chi tiết</button>
+            </div>
+
+          </div>
+        </div>
+        }
+      </div>
+
+    </div>
+
   </div>
-}
+</div>
