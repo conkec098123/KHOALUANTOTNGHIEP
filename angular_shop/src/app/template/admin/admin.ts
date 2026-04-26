@@ -1,6 +1,7 @@
 import { HttpClient, HttpClientModule } from '@angular/common/http';
 import { Component, OnInit, signal } from '@angular/core';
 import { RouterLink, RouterOutlet, Router } from '@angular/router';
+import { environment } from '../../../environments/environment';
 
 @Component({
   selector: 'app-admin',
@@ -25,13 +26,13 @@ export class Admin implements OnInit{
   
 
   ngOnInit() {
-    this.http.get<any[]>('http://127.0.0.1:5000/api/products', { withCredentials: true })
+    this.http.get<any[]>(`${environment.apiUrl}/api/products`, { withCredentials: true })
       .subscribe(data => {
         console.log("DATA:", data);
         this.products.set(data);
       });
 
-    this.http.get<any>('http://127.0.0.1:5000/api/current-user', { withCredentials: true })
+    this.http.get<any>(`${environment.apiUrl}/api/current-user`, { withCredentials: true })
       .subscribe(data => {
         console.log(data);
         this.full_name.set(data.name);
@@ -40,7 +41,7 @@ export class Admin implements OnInit{
 
   deleteProduct(id: number) {
     if (confirm("Bạn có chắc muốn xóa không?")) {
-      this.http.delete(`http://127.0.0.1:5000/api/products/${id}`)
+      this.http.delete(`${environment.apiUrl}/api/products/${id}`)
         .subscribe(() => {
           alert("Đã xóa!");
 

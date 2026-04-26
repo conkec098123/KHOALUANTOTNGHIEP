@@ -2,6 +2,7 @@ import { CommonModule } from '@angular/common';
 import { HttpClient } from '@angular/common/http';
 import { Component, OnInit, ChangeDetectorRef } from '@angular/core';
 import { ActivatedRoute, RouterModule } from '@angular/router';
+import { environment } from '../../../environments/environment';
 
 @Component({
   selector: 'app-productdetail',
@@ -26,7 +27,7 @@ export class Productdetail implements OnInit {
 
       this.product = null;
 
-      this.http.get(`http://localhost:5000/api/product/${id}`)
+      this.http.get(`${environment.apiUrl}/api/product/${id}`)
         .subscribe((res: any) => {
           this.product = res;
           this.cdr.detectChanges();

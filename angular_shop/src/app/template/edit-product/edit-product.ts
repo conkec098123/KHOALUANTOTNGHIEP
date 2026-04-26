@@ -2,6 +2,7 @@ import { Component, OnInit } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { ActivatedRoute, Router } from '@angular/router';
 import { FormsModule } from '@angular/forms';
+import { environment } from '../../../environments/environment';
 
 
 @Component({
@@ -26,8 +27,7 @@ export class EditProduct {
   ngOnInit() {
     this.id = Number(this.route.snapshot.paramMap.get('id'));
 
-    // lấy dữ liệu sản phẩm
-    this.http.get<any>(`http://127.0.0.1:5000/api/products/${this.id}`)
+    this.http.get<any>(`${environment.apiUrl}api/products/${this.id}`)
       .subscribe(data => {
         this.name = data.name;
         this.price = data.price;
@@ -37,7 +37,7 @@ export class EditProduct {
   }
 
   submit() {
-    this.http.put(`http://127.0.0.1:5000/api/products/${this.id}`, {
+    this.http.put(`${environment.apiUrl}/api/products/${this.id}`, {
       name: this.name,
       price: this.price,
       discount_price: this.discount_price,

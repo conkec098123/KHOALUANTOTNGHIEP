@@ -3,6 +3,7 @@ import { Component, OnInit, signal } from '@angular/core';
 import { Router, RouterLink, RouterOutlet } from '@angular/router';
 import { CartService } from '../services/cart';
 import { DecimalPipe } from '@angular/common';
+import { environment } from '../../../environments/environment';
 
 @Component({
   selector: 'app-home',
@@ -10,7 +11,7 @@ import { DecimalPipe } from '@angular/common';
   templateUrl: './home.html',
   styleUrl: './home.css',
 })
-export class Home implements OnInit{
+export class Home implements OnInit {
   title = signal('Laptop Store');
 
   products = signal<any[]>([]);
@@ -19,11 +20,19 @@ export class Home implements OnInit{
 
   cart = signal<string[]>([]);
 
-  constructor(private http: HttpClient, private cartService: CartService, private router: Router) {}
+  constructor(private http: HttpClient, private cartService: CartService, private router: Router) { }
 
   addToCart(product: any) {
-  this.cartService.addToCart(product);
-  }
+  this.cartService.addToCart(product)
+    .subscribe({
+      next: (res: any) => {
+        console.log("SUCCESS:", res);
+      },
+      error: (err) => {
+        console.log("ERROR:", err);
+      }
+    });
+}
 
   viewDetail(product: any) {
     this.router.navigate(['/product', product.id]);
@@ -31,12 +40,12 @@ export class Home implements OnInit{
   }
 
   ngOnInit() {
-    this.http.get<any[]>('http://127.0.0.1:5000/api/products', { withCredentials: true })
+    this.http.get<any[]>(`${environment.apiUrl}/api/products`, { withCredentials: true })
       .subscribe(data => {
         this.products.set(data);
       });
 
-    this.http.get<any>('http://127.0.0.1:5000/api/current-user', { withCredentials: true })
+    this.http.get<any>(`${environment.apiUrl}/api/current-user`, { withCredentials: true })
       .subscribe(data => {
         console.log(data);
         this.full_name.set(data.name);

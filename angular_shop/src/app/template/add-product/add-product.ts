@@ -2,6 +2,7 @@ import { HttpClient } from '@angular/common/http';
 import { Component } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
+import { environment } from '../../../environments/environment';
 
 @Component({
   selector: 'app-add-product',
@@ -19,7 +20,7 @@ export class AddProduct {
   submit() {
     if (!this.name || this.price === null || this.qty === null) return;
 
-    this.http.post('http://127.0.0.1:5000/add_product', {
+    this.http.post(`${environment.apiUrl}/add_product`, {
       name: this.name,
       price: this.price,
       qty: this.qty

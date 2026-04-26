@@ -1,26 +1,53 @@
 import { Injectable, signal } from '@angular/core';
+import { environment } from '../../../environments/environment';
+import { HttpClient } from '@angular/common/http';
+import { of } from 'rxjs';
 
 @Injectable({
   providedIn: 'root'
 })
 export class CartService {
 
+  constructor(private http: HttpClient) { }
+
+  isLoggedIn = false;
+
   cart = signal<any[]>(this.loadCart());
 
   addToCart(product: any) {
-    this.cart.update(items => {
-      const existing = items.find(i => i.id === product.id);
+    console.log("isLoggedIn:", this.isLoggedIn);
+    if (this.isLoggedIn) {
+      return this.http.post(`${environment.apiUrl}/api/cart/add`, {
+        product_id: product.id,
+        qty: 1
+      }, {
+        withCredentials: true
+      });
+    } else {
+      this.cart.update(item => {
+        const existing = item.find(i => i.id === product.id);
 
-      if (existing) {
-        existing.qty += 1;
-      } else {
-        items.push({ ...product, qty: 1 });
-      }
+        if (existing) existing.qty += 1;
+        else item.push({ ...product, qty: 1 });
 
-      return [...items];
+        return [...item];
+      });
+      this.saveCart();
+
+      return of({ message: "local added" });
+    }
+  }
+
+  loadCartFromDB() {
+  return this.http.get<any[]>(`${environment.apiUrl}/api/cart`, {
+    withCredentials: true
+  });
+}
+
+  checkLogin() {
+    return this.http.get(`${environment.apiUrl}/api/current-user`, {
+      withCredentials: true
     });
-
-    this.saveCart(); 
   }
 
   increase(item: any) {
@@ -52,8 +79,8 @@ export class CartService {
   }
 
   loadCart() {
-  const data = localStorage.getItem('cart');
-  return data ? JSON.parse(data) : [];
+    const data = localStorage.getItem('cart');
+    return data ? JSON.parse(data) : [];
   }
 
   saveCart() {

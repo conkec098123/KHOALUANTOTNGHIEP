@@ -1,3 +1,5 @@
+import traceback
+
 from flask import Flask, render_template, url_for, request, redirect, session, jsonify
 import pyodbc
 from flask_cors import CORS
@@ -6,6 +8,9 @@ from flask import jsonify
 app = Flask(__name__, static_folder='static')
 app.secret_key = "abc123"
 CORS(app, supports_credentials=True, origins=["http://localhost:4200"])
+
+app.config['SESSION_COOKIE_SAMESITE'] = 'Lax'
+app.config['SESSION_COOKIE_SECURE'] = False
 
 server = 'localhost'
 database = 'KHOALUANTOTNGHIEP'
@@ -22,12 +27,24 @@ print("Connected successfully!")
 
 @app.route("/")
 def home():
+    conn = pyodbc.connect(
+    'DRIVER={SQL Server};'
+    f'SERVER={server};'
+    f'DATABASE={database};'
+    'Trusted_Connection=yes;')
+    cursor = conn.cursor()
     cursor.execute("SELECT * FROM Products")
     products = cursor.fetchall()
     return render_template("index.html", products=products)
 
 @app.route("/api/products")
 def api_products():
+    conn = pyodbc.connect(
+    'DRIVER={SQL Server};'
+    f'SERVER={server};'
+    f'DATABASE={database};'
+    'Trusted_Connection=yes;')
+    cursor = conn.cursor()
     cursor.execute("""
         SELECT product_id, name, price, discount_price, image, qty
         FROM Product
@@ -49,40 +66,54 @@ def api_products():
 
     return jsonify(data)
 
-@app.route('/api/current-user')
+@app.route("/api/current-user")
 def current_user():
 
-    # 👉 nếu là admin
-    if 'user_id' in session:
-        user_id = session['user_id']
+    conn = pyodbc.connect(
+    'DRIVER={SQL Server};'
+    f'SERVER={server};'
+    f'DATABASE={database};'
+    'Trusted_Connection=yes;')
+    cursor = conn.cursor()
 
-        cursor.execute("SELECT username FROM [User] WHERE user_id = ?", user_id)
-        user = cursor.fetchone()
+    print("SESSION:", session)
+    try:
+
+        if "user_id" in session:
+            cursor.execute("SELECT username FROM [User] WHERE user_id = ?", (session["user_id"],))
+            user = cursor.fetchone()
+
+            if user:
+                return jsonify({
+                    "name": user[0],
+                    "role": "admin"
+                })
+
+        if "customer_id" in session:
+            cursor.execute("SELECT full_name FROM Customer WHERE customer_id = ?", (session["customer_id"],))
+            customer = cursor.fetchone()
+
+            if customer:
+                return jsonify({
+                    "name": customer[0],
+                    "role": "customer"
+                })
 
         return jsonify({
-            "name": user.username,
-            "role": "admin"
+            "name": "Guest",
+            "role": "guest"
         })
-
-    # 👉 nếu là customer
-    elif 'customer_id' in session:
-        customer_id = session['customer_id']
-
-        cursor.execute("SELECT fullname FROM Customer WHERE customer_id = ?", customer_id)
-        customer = cursor.fetchone()
-
-        return jsonify({
-            "name": customer.fullname,
-            "role": "customer"
-        })
-
-    return jsonify({
-        "name": "Guest",
-        "role": "guest"
-    })
+    except Exception as e:
+        print(traceback.format_exc())
 
 @app.route("/register", methods=["GET", "POST"])
 def register():
+    conn = pyodbc.connect(
+    'DRIVER={SQL Server};'
+    f'SERVER={server};'
+    f'DATABASE={database};'
+    'Trusted_Connection=yes;')
+    cursor = conn.cursor()
     if request.method == "POST":
         username = request.form["username"]
         password = request.form["password"]
@@ -108,49 +139,86 @@ def register():
 
     return render_template("register.html")
 
-@app.route("/login", methods=["GET", "POST"])
+@app.route("/login", methods=["POST"])
 def login():
-    if request.method == "POST":
-        username = request.form["username"]
-        password = request.form["password"]
 
-        cursor.execute("""
-            SELECT * FROM [User]
-            WHERE username = ? AND password = ?
-        """, (username, password))
-        admin = cursor.fetchone()
+    conn = pyodbc.connect(
+    'DRIVER={SQL Server};'
+    f'SERVER={server};'
+    f'DATABASE={database};'
+    'Trusted_Connection=yes;')
+    cursor = conn.cursor()
 
-        if admin:
-            session["user_id"] = admin[0]   
-            session["role"] = "admin"
-            return redirect("http://localhost:4200/admin")  
+    data = request.get_json()
 
-        # Kiểm tra trong bảng Customer (khách)
-        cursor.execute("""
-            SELECT * FROM Customer
-            WHERE full_name = ? AND password = ?
-        """, (username, password))
-        customer = cursor.fetchone()
+    username = data["username"].strip()
+    password = data["password"].strip()
 
-        if customer:
-            session["customer_id"] = customer[0]
-            session["role"] = "customer"
-            return redirect("http://localhost:4200/")
-        
-        print(session)
+    print("USERNAME:", username)
+    print("PASSWORD:", password)
 
-        return "Sai tài khoản hoặc mật khẩu"
+    # 🔥 1. CHECK ADMIN
+    cursor.execute("""
+        SELECT * FROM [User]
+        WHERE username = ? AND password = ?
+    """, (username, password))
 
-    return render_template("login.html")
+    admin = cursor.fetchone()
+    print("ADMIN FOUND:", admin)
+
+    if admin:
+        session["user_id"] = admin[0]
+        session["role"] = "admin"
+
+        return jsonify({
+            "id": admin[0],
+            "name": admin[1],
+            "role": "admin"
+        })
+
+    # 🔥 2. CHECK CUSTOMER
+    cursor.execute("""
+        SELECT * FROM Customer
+        WHERE full_name = ? AND password = ?
+    """, (username, password))
+
+    customer = cursor.fetchone()
+    print("CUSTOMER FOUND:", customer)
+
+    if customer:
+        session["customer_id"] = customer[0]
+        session["role"] = "customer"
+
+        return jsonify({
+            "id": customer[0],
+            "name": customer[1],
+            "role": "customer"
+        })
+
+    return jsonify({"error": "invalid"}), 401
 
 @app.route("/admin")
 def admin():
+
+    conn = pyodbc.connect(
+    'DRIVER={SQL Server};'
+    f'SERVER={server};'
+    f'DATABASE={database};'
+    'Trusted_Connection=yes;')
+    cursor = conn.cursor()
     cursor.execute("SELECT * FROM Products")
     products = cursor.fetchall()
     return render_template("admin.html", products=products)
 
 @app.route("/admin/orders")
 def adminorders():
+
+    conn = pyodbc.connect(
+    'DRIVER={SQL Server};'
+    f'SERVER={server};'
+    f'DATABASE={database};'
+    'Trusted_Connection=yes;')
+    cursor = conn.cursor()
 
     cursor.execute("""
         SELECT O.order_id, U.username, O.total_price, O.order_date
@@ -162,22 +230,151 @@ def adminorders():
 
     return render_template("adminorders.html", orders=orders)
 
-@app.route("/admin/order/<int:order_id>")
-def order_detail(order_id):
+@app.route("/api/cart", methods=["GET"])
+def get_cart():
+
+    if "customer_id" not in session:
+        return jsonify([])
+
+    customer_id = session["customer_id"]
+
+    conn = pyodbc.connect('DRIVER={SQL Server};'
+    f'SERVER={server};'
+    f'DATABASE={database};'
+    'Trusted_Connection=yes;')
+    cursor = conn.cursor()
 
     cursor.execute("""
-        SELECT P.name, OD.quantity, OD.price
-        FROM Order_Details OD
-        JOIN Products P ON OD.product_id = P.product_id
-        WHERE OD.order_id = ?
-    """, (order_id,))
+        SELECT p.product_id, p.name, p.price, cd.qty
+        FROM Cart c
+        JOIN CartDetail cd ON c.cart_id = cd.cart_id
+        JOIN Product p ON cd.product_id = p.product_id
+        WHERE c.customer_id = ?
+    """, (customer_id,))
 
-    details = cursor.fetchall()
+    items = cursor.fetchall()
 
-    return render_template("orderdetails.html", details=details)
+    result = []
+    for item in items:
+        result.append({
+            "id": item[0],
+            "name": item[1],
+            "price": item[2],
+            "qty": item[3]
+        })
+
+    conn.close()
+
+    return jsonify(result)
+
+@app.route("/api/cart/add", methods=["POST"])
+def add_to_cart():
+
+    conn = pyodbc.connect(
+    'DRIVER={SQL Server};'
+    f'SERVER={server};'
+    f'DATABASE={database};'
+    'Trusted_Connection=yes;')
+    cursor = conn.cursor()
+
+    if "customer_id" not in session:
+        return jsonify({"error": "not login"}), 401
+
+    data = request.get_json()
+    product_id = data["product_id"]
+    qty = data.get("qty", 1)
+
+    customer_id = session["customer_id"]
+
+    cursor.execute("SELECT cart_id FROM Cart WHERE customer_id = ?", (customer_id,))
+    cart = cursor.fetchone()
+
+    if not cart:
+        cursor.execute("INSERT INTO Cart (customer_id) VALUES (?)", (customer_id,))
+        conn.commit()
+
+        cursor.execute("SELECT cart_id FROM Cart WHERE customer_id = ?", (customer_id,))
+        cart = cursor.fetchone()
+
+    cart_id = cart[0]
+
+    cursor.execute("""
+        SELECT * FROM CartDetail
+        WHERE cart_id = ? AND product_id = ?
+    """, (cart_id, product_id))
+
+    item = cursor.fetchone()
+
+    if item:
+        cursor.execute("""
+            UPDATE CartDetail
+            SET qty = qty + ?
+            WHERE cart_id = ? AND product_id = ?
+        """, (qty, cart_id, product_id))
+    else:
+        cursor.execute("""
+            INSERT INTO CartDetail (cart_id, product_id, qty)
+            VALUES (?, ?, ?)
+        """, (cart_id, product_id, qty))
+
+    conn.commit()
+
+    return jsonify({"message": "added"})
+
+@app.route("/api/cart/merge", methods=["POST"])
+def merge_cart():
+
+    conn = pyodbc.connect(
+    'DRIVER={SQL Server};'
+    f'SERVER={server};'
+    f'DATABASE={database};'
+    'Trusted_Connection=yes;')
+    cursor = conn.cursor()
+
+    if "customer_id" not in session:
+        return jsonify({"error": "not login"}), 401
+
+    data = request.get_json()
+    cart_items = data.get("cart", [])
+
+    customer_id = session["customer_id"]
+
+    # lấy hoặc tạo cart
+    cursor.execute("SELECT cart_id FROM Cart WHERE customer_id = ?", (customer_id,))
+    cart = cursor.fetchone()
+
+    if not cart:
+        cursor.execute("INSERT INTO Cart (customer_id) VALUES (?)", (customer_id,))
+        conn.commit()
+        cursor.execute("SELECT cart_id FROM Cart WHERE customer_id = ?", (customer_id,))
+        cart = cursor.fetchone()
+
+    cart_id = cart[0]
+
+    # 🔥 BƯỚC QUAN TRỌNG: XÓA CART CŨ
+    cursor.execute("DELETE FROM CartDetail WHERE cart_id = ?", (cart_id,))
+
+    # 🔥 insert lại từ local
+    for item in cart_items:
+        cursor.execute("""
+            INSERT INTO CartDetail (cart_id, product_id, qty)
+            VALUES (?, ?, ?)
+        """, (cart_id, item["id"], item["qty"]))
+
+    conn.commit()
+
+    return jsonify({"message": "overwrite success"})
 
 @app.route("/add_product", methods=["POST"])
 def add_product():
+
+    conn = pyodbc.connect(
+    'DRIVER={SQL Server};'
+    f'SERVER={server};'
+    f'DATABASE={database};'
+    'Trusted_Connection=yes;')
+    cursor = conn.cursor()
+
     data = request.json  
     name = data.get("name")
     price = data.get("price")
@@ -193,6 +390,14 @@ def add_product():
 
 @app.route("/api/products/<int:id>")
 def get_product(id):
+
+    conn = pyodbc.connect(
+    'DRIVER={SQL Server};'
+    f'SERVER={server};'
+    f'DATABASE={database};'
+    'Trusted_Connection=yes;')
+    cursor = conn.cursor()
+
     cursor.execute("SELECT product_id, name, price, discount_price, qty FROM Product WHERE product_id = ?", (id,))
     p = cursor.fetchone()
 
@@ -206,6 +411,13 @@ def get_product(id):
 
 @app.route("/api/products/<int:id>", methods=["PUT"])
 def update_product(id):
+
+    conn = pyodbc.connect(
+    'DRIVER={SQL Server};'
+    f'SERVER={server};'
+    f'DATABASE={database};'
+    'Trusted_Connection=yes;')
+    cursor = conn.cursor()
     data = request.get_json()
 
     name = data.get("name")
@@ -225,6 +437,12 @@ def update_product(id):
 
 @app.route('/api/product/<int:id>', methods=['GET'])
 def get_product_detail(id):
+    conn = pyodbc.connect(
+    'DRIVER={SQL Server};'
+    f'SERVER={server};'
+    f'DATABASE={database};'
+    'Trusted_Connection=yes;')
+    cursor = conn.cursor()
     query = """
     SELECT 
         p.product_id,
@@ -268,6 +486,13 @@ def get_product_detail(id):
 
 @app.route("/api/products/<int:id>", methods=["DELETE"])
 def delete_product(id):
+
+    conn = pyodbc.connect(
+    'DRIVER={SQL Server};'
+    f'SERVER={server};'
+    f'DATABASE={database};'
+    'Trusted_Connection=yes;')
+    cursor = conn.cursor()
     cursor.execute("DELETE FROM Product WHERE product_id = ?", (id,))
     conn.commit()
 
@@ -275,6 +500,13 @@ def delete_product(id):
 
 @app.route("/checkout/<int:product_id>")
 def checkout(product_id):
+
+    conn = pyodbc.connect(
+    'DRIVER={SQL Server};'
+    f'SERVER={server};'
+    f'DATABASE={database};'
+    'Trusted_Connection=yes;')
+    cursor = conn.cursor()
     cursor.execute("SELECT * FROM Products WHERE product_id = ?", product_id)
     product = cursor.fetchone()
 
@@ -282,6 +514,13 @@ def checkout(product_id):
 
 @app.route("/process_payment/<int:product_id>", methods=["POST"])
 def process_payment(product_id):
+
+    conn = pyodbc.connect(
+    'DRIVER={SQL Server};'
+    f'SERVER={server};'
+    f'DATABASE={database};'
+    'Trusted_Connection=yes;')
+    cursor = conn.cursor()
     quantity = int(request.form["quantity"])
     users_id = session["users_id"]
 
@@ -325,4 +564,4 @@ def process_payment(product_id):
     return "Thanh toán thành công"
 
 if __name__ == "__main__":
-    app.run(debug=True)
+    app.run(host='localhost', port=5000, debug=True, use_reloader=False, threaded=True) 
