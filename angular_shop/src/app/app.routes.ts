@@ -6,6 +6,7 @@ import { AddProduct } from './template/add-product/add-product';
 import { EditProduct } from './template/edit-product/edit-product';
 import { Cart } from './template/cart/cart';
 import { Productdetail } from './template/productdetail/productdetail';
+import { Register } from './template/register/register';
 
 export const routes: Routes = [
     {
@@ -16,6 +17,10 @@ export const routes: Routes = [
     {
         path:"login",
         component: Login
+    },
+    {
+        path:"register",
+        component:Register
     },
     {
         path:"admin",

@@ -3,7 +3,6 @@ import traceback
 from flask import Flask, render_template, url_for, request, redirect, session, jsonify
 import pyodbc
 from flask_cors import CORS
-from flask import jsonify   
 
 app = Flask(__name__, static_folder='static')
 app.secret_key = "abc123"
@@ -562,6 +561,89 @@ def process_payment(product_id):
     print("Quantity:", quantity)
 
     return "Thanh toán thành công"
+
+@app.route("/api/products/filter", methods=["POST"])
+def filter_products():
+    data = request.get_json()
+
+    ram = [int(x) for x in data.get("ram", [])]
+    ssd = [int(x) for x in data.get("ssd", [])]
+    cpu = data.get("cpu", [])
+    category = data.get("category")
+
+    query = """
+    SELECT DISTINCT p.*
+    FROM Product p
+    WHERE 1=1
+    """
+
+    params = []
+
+    # 🔹 lọc category (menu)
+    if category is not None:
+        query += " AND p.menu_id = ?"
+        params.append(category)
+
+    # 🔹 lọc RAM
+    if ram:
+        query += """
+AND p.product_id IN (
+    SELECT pa.product_id
+    FROM ProductAttribute pa
+    JOIN Attribute a ON pa.attribute_id = a.attribute_id
+    WHERE a.name = 'RAM'
+    AND TRY_CAST(pa.value AS INT) IN ({})
+)
+""".format(",".join("?" * len(ram)))
+        params.extend(ram)
+
+    # 🔹 lọc SSD
+    if ssd:
+        query += """
+AND p.product_id IN (
+    SELECT pa.product_id
+    FROM ProductAttribute pa
+    JOIN Attribute a ON pa.attribute_id = a.attribute_id
+    WHERE a.name = 'SSD'
+    AND TRY_CAST(pa.value AS INT) IN ({})
+)
+""".format(",".join("?" * len(ssd)))
+        params.extend(ssd)
+
+    # 🔹 lọc CPU (text)
+    if cpu:
+        query += """
+AND p.product_id IN (
+    SELECT pa.product_id
+    FROM ProductAttribute pa
+    JOIN Attribute a ON pa.attribute_id = a.attribute_id
+    WHERE a.name = 'CPU'
+    AND pa.value IN ({})
+)
+""".format(",".join("?" * len(cpu)))
+        params.extend(cpu)
+
+    print("QUERY:", query)
+    print("PARAMS:", params)
+
+    cursor.execute(query, params)
+    rows = cursor.fetchall()
+
+    # 👉 convert sang JSON
+    products = []
+    for r in rows:
+        products.append({
+            "product_id": r[0],
+            "menu_id": r[1],
+            "name": r[2],
+            "slug": r[3],
+            "image": r[4],
+            "status": r[6],
+            "price": r[7],
+            "discount_price": r[8]
+        })
+
+    return jsonify(products)
 
 if __name__ == "__main__":
     app.run(host='localhost', port=5000, debug=True, use_reloader=False, threaded=True) 

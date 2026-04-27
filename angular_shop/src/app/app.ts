@@ -1,6 +1,8 @@
 import { HttpClient } from '@angular/common/http';
 import { Component, OnInit, signal } from '@angular/core';
-import { RouterLink, RouterOutlet } from '@angular/router';
+import { Router, RouterLink, RouterOutlet } from '@angular/router';
+import { environment } from '../environments/environment';
+import { CartService } from './template/services/cart';
 
 @Component({
   selector: 'app-root',
@@ -8,19 +10,26 @@ import { RouterLink, RouterOutlet } from '@angular/router';
   templateUrl: './app.html',
   styleUrl: './app.css'
 })
-export class App implements OnInit{
+export class App implements OnInit {
   title = signal('Laptop Store');
 
   products = signal<any[]>([]);
 
+  full_name = signal<string>('');
+
   cart = signal<string[]>([]);
 
-  constructor(private http: HttpClient) {}
+  constructor(private http: HttpClient, private cartService: CartService, private router: Router) { }
 
   ngOnInit() {
-    this.http.get<any[]>('http://127.0.0.1:5000/api/products')
+    this.http.get<any[]>(`${environment.apiUrl}/api/products`)
       .subscribe(data => {
         this.products.set(data);
+      });
+    this.http.get<any>(`${environment.apiUrl}/api/current-user`, { withCredentials: true })
+      .subscribe(data => {
+        console.log(data);
+        this.full_name.set(data.name);
       });
   }
 

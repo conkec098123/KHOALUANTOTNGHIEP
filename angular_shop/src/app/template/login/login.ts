@@ -22,6 +22,10 @@ export class Login {
     private cartService: CartService
   ) { }
 
+  gotoregister() {
+    this.router.navigate(['/register'])
+  }
+
   login() {
 
     const formData = {
