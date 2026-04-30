@@ -1,9 +1,10 @@
 import { HttpClient, HttpClientModule } from '@angular/common/http';
-import { Component, OnInit, signal } from '@angular/core';
+import { Component, effect, OnInit, signal } from '@angular/core';
 import { Router, RouterLink, RouterOutlet } from '@angular/router';
 import { CartService } from '../services/cart';
 import { CommonModule, DecimalPipe } from '@angular/common';
 import { environment } from '../../../environments/environment';
+import { SearchService } from '../services/search';
 
 type FilterType = {
   ram: number[];
@@ -26,18 +27,26 @@ export class Home implements OnInit {
 
   cart = signal<string[]>([]);
 
-  
+
 
   filters: FilterType = {
-  ram: [],
-  ssd: [],
-  cpu: []
-};
+    ram: [],
+    ssd: [],
+    cpu: []
+  };
 
-category: number | null = null;
+  category: number | null = null;
 
 
-  constructor(private http: HttpClient, private cartService: CartService, private router: Router) { }
+  constructor(private http: HttpClient,
+    private cartService: CartService,
+    private router: Router,
+    private searchService: SearchService) {
+      effect(() => {
+      const keyword = this.searchService.keyword();
+      this.loadProducts(keyword);
+    });
+     }
 
   addToCart(product: any) {
     this.cartService.addToCart(product)
@@ -52,45 +61,43 @@ category: number | null = null;
   }
 
   viewDetail(product: any) {
-    this.router.navigate(['/product', product.id]);
+    this.router.navigate(['/product', product.product_id]);
     console.log('CLICK OK', product);
   }
 
-  loadProducts() {
-    this.http.post<any[]>(
-      `${environment.apiUrl}/api/products/filter`,
-      {
-        ...this.filters,
-        category: this.category
-      }
-    ).subscribe(res => {
-      this.products.set(res);
-    });
-  }
+  loadProducts(keyword: string = '') {
+  this.http.post(`${environment.apiUrl}/api/products/filter`, {
+    keyword: keyword,
+    category: this.category,
+    ...this.filters
+  }).subscribe((res: any) => {
+    this.products.set(res);
+  });
+}
 
   onFilterChange(type: keyof FilterType, value: any, event: any) {
 
-  if (type === 'ram' || type === 'ssd') {
-    const arr = this.filters[type] as number[];
+    if (type === 'ram' || type === 'ssd') {
+      const arr = this.filters[type] as number[];
 
-    if (event.target.checked) {
-      arr.push(Number(value));
-    } else {
-      this.filters[type] = arr.filter(v => v !== Number(value));
+      if (event.target.checked) {
+        arr.push(Number(value));
+      } else {
+        this.filters[type] = arr.filter(v => v !== Number(value));
+      }
+
+    } else if (type === 'cpu') {
+      const arr = this.filters[type] as string[];
+
+      if (event.target.checked) {
+        arr.push(String(value));
+      } else {
+        this.filters[type] = arr.filter(v => v !== String(value));
+      }
     }
 
-  } else if (type === 'cpu') {
-    const arr = this.filters[type] as string[];
-
-    if (event.target.checked) {
-      arr.push(String(value));
-    } else {
-      this.filters[type] = arr.filter(v => v !== String(value));
-    }
+    this.loadProducts();
   }
-
-  this.loadProducts();
-}
 
   setCategory(id: number) {
     this.category = id;

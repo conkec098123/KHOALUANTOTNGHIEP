@@ -44,7 +44,6 @@ export class Login {
 
         const localCart = JSON.parse(localStorage.getItem("cart") || "[]");
 
-        // 🔥 nếu có cart thì mới merge
         if (localCart.length > 0) {
 
           this.http.post(`${environment.apiUrl}/api/cart/merge`, {
@@ -78,15 +77,26 @@ export class Login {
 
     this.cartService.isLoggedIn = true;
 
-    // 🔥 load cart từ DB
-    this.cartService.loadCartFromDB().subscribe(data => {
-      this.cartService.cart.set(data);
+    this.cartService.loadCartFromDB().subscribe(cartData => {
+      this.cartService.cart.set(cartData);
 
-      if (loginRes.role === 'admin') {
-        this.router.navigate(['/admin']);
-      } else {
-        this.router.navigate(['/']);
-      }
+      // LẤY USER TỪ BACKEND
+      this.http.get<any>(
+        `${environment.apiUrl}/api/current-user`,
+        { withCredentials: true }
+      ).subscribe(user => {
+
+        this.cartService.user.set(user); // ✔ đúng
+
+        // điều hướng
+        if (loginRes.role === 'admin') {
+          this.router.navigate(['/admin']);
+        } else {
+          this.router.navigate(['/']);
+        }
+
+      });
+
     });
   }
 }

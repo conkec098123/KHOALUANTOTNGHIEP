@@ -105,38 +105,43 @@ def current_user():
     except Exception as e:
         print(traceback.format_exc())
 
-@app.route("/register", methods=["GET", "POST"])
+@app.route("/api/register", methods=["POST"])
 def register():
+    data = request.get_json()
+
+    username = data.get("username")
+    password = data.get("password")
+    repassword = data.get("repassword")
+
+    if not username or not password:
+        return jsonify({"error": "Thiếu dữ liệu"}), 400
+
+    if password != repassword:
+        return jsonify({"error": "Mật khẩu không khớp"}), 400
+
     conn = pyodbc.connect(
-    'DRIVER={SQL Server};'
-    f'SERVER={server};'
-    f'DATABASE={database};'
-    'Trusted_Connection=yes;')
+        'DRIVER={SQL Server};'
+        f'SERVER={server};'
+        f'DATABASE={database};'
+        'Trusted_Connection=yes;'
+    )
     cursor = conn.cursor()
-    if request.method == "POST":
-        username = request.form["username"]
-        password = request.form["password"]
-        repassword = request.form["repassword"]
 
-        cursor.execute("SELECT * FROM Users WHERE username = ?", (username,))
-        user = cursor.fetchone()
+    # check user tồn tại
+    cursor.execute("SELECT 1 FROM Customer WHERE full_name = ?", (username,))
+    if cursor.fetchone():
+        conn.close()
+        return jsonify({"error": "Username đã tồn tại"}), 400
 
-        if user:
-            return "Username đã tồn tại!"
-        if password != repassword:
-            return "mật khẩu không trùng khớp"
+    cursor.execute("""
+        INSERT INTO Customer (full_name, password)
+        VALUES (?, ?)
+    """, (username, password))
 
+    conn.commit()
+    conn.close()
 
-        cursor.execute("""
-            INSERT INTO Users (username, password, role)
-            VALUES (?, ?, ?)
-        """, (username, password, "user"))
-
-        conn.commit()
-
-        return redirect(url_for("login"))
-
-    return render_template("register.html")
+    return jsonify({"message": "Đăng ký thành công"})
 
 @app.route("/login", methods=["POST"])
 def login():
@@ -195,6 +200,11 @@ def login():
         })
 
     return jsonify({"error": "invalid"}), 401
+
+@app.route('/logout', methods=['POST'])
+def logout():
+    session.clear()
+    return jsonify({"message": "logged out"})
 
 @app.route("/admin")
 def admin():
@@ -350,10 +360,8 @@ def merge_cart():
 
     cart_id = cart[0]
 
-    # 🔥 BƯỚC QUAN TRỌNG: XÓA CART CŨ
     cursor.execute("DELETE FROM CartDetail WHERE cart_id = ?", (cart_id,))
 
-    # 🔥 insert lại từ local
     for item in cart_items:
         cursor.execute("""
             INSERT INTO CartDetail (cart_id, product_id, qty)
@@ -566,61 +574,67 @@ def process_payment(product_id):
 def filter_products():
     data = request.get_json()
 
-    ram = [int(x) for x in data.get("ram", [])]
-    ssd = [int(x) for x in data.get("ssd", [])]
+    ram = data.get("ram", [])
+    ssd = data.get("ssd", [])
     cpu = data.get("cpu", [])
     category = data.get("category")
+    keyword = data.get("keyword", "")
 
     query = """
     SELECT DISTINCT p.*
     FROM Product p
     WHERE 1=1
     """
-
     params = []
 
-    # 🔹 lọc category (menu)
-    if category is not None:
+    if category:
         query += " AND p.menu_id = ?"
         params.append(category)
 
-    # 🔹 lọc RAM
+    if keyword:
+        query += " AND p.name LIKE ?"
+        params.append(f"%{keyword}%")
+
     if ram:
-        query += """
-AND p.product_id IN (
-    SELECT pa.product_id
-    FROM ProductAttribute pa
-    JOIN Attribute a ON pa.attribute_id = a.attribute_id
-    WHERE a.name = 'RAM'
-    AND TRY_CAST(pa.value AS INT) IN ({})
-)
-""".format(",".join("?" * len(ram)))
-        params.extend(ram)
+        placeholders = ",".join("?" for _ in ram)
+        query += f"""
+        AND EXISTS (
+            SELECT 1
+            FROM ProductAttribute pa
+            JOIN Attribute a ON pa.attribute_id = a.attribute_id
+            WHERE pa.product_id = p.product_id
+              AND a.name = 'RAM'
+              AND pa.value IN ({placeholders})
+        )
+        """
+        params.extend([str(x) for x in ram])
 
-    # 🔹 lọc SSD
     if ssd:
-        query += """
-AND p.product_id IN (
-    SELECT pa.product_id
-    FROM ProductAttribute pa
-    JOIN Attribute a ON pa.attribute_id = a.attribute_id
-    WHERE a.name = 'SSD'
-    AND TRY_CAST(pa.value AS INT) IN ({})
-)
-""".format(",".join("?" * len(ssd)))
-        params.extend(ssd)
+        placeholders = ",".join("?" for _ in ssd)
+        query += f"""
+        AND EXISTS (
+            SELECT 1
+            FROM ProductAttribute pa
+            JOIN Attribute a ON pa.attribute_id = a.attribute_id
+            WHERE pa.product_id = p.product_id
+              AND a.name = 'SSD'
+              AND pa.value IN ({placeholders})
+        )
+        """
+        params.extend([str(x) for x in ssd])
 
-    # 🔹 lọc CPU (text)
     if cpu:
-        query += """
-AND p.product_id IN (
-    SELECT pa.product_id
-    FROM ProductAttribute pa
-    JOIN Attribute a ON pa.attribute_id = a.attribute_id
-    WHERE a.name = 'CPU'
-    AND pa.value IN ({})
-)
-""".format(",".join("?" * len(cpu)))
+        placeholders = ",".join("?" for _ in cpu)
+        query += f"""
+        AND EXISTS (
+            SELECT 1
+            FROM ProductAttribute pa
+            JOIN Attribute a ON pa.attribute_id = a.attribute_id
+            WHERE pa.product_id = p.product_id
+              AND a.name = 'CPU'
+              AND pa.value IN ({placeholders})
+        )
+        """
         params.extend(cpu)
 
     print("QUERY:", query)
@@ -629,14 +643,13 @@ AND p.product_id IN (
     cursor.execute(query, params)
     rows = cursor.fetchall()
 
-    # 👉 convert sang JSON
     products = []
     for r in rows:
         products.append({
             "product_id": r[0],
             "menu_id": r[1],
             "name": r[2],
-            "slug": r[3],
+            "alias": r[3],
             "image": r[4],
             "status": r[6],
             "price": r[7],

@@ -5,7 +5,7 @@
     <form>
       <input class="form-control mb-3" [(ngModel)]="username" name="username">
       <input class="form-control mb-3" [(ngModel)]="password" name="password">
-      <div class="mb-3"><span >bạn chưa có tài khoản?</span> <button class="ms-3" (click)="gotoregister()">đăng ký</button></div>
+      <div class="mb-3"><span >bạn chưa có tài khoản?</span> <button class="btn btn-link" (click)="gotoregister()">đăng ký</button></div>
 
       <button (click)="login()" class="btn btn-primary w-100">Đăng nhập</button>
     </form>

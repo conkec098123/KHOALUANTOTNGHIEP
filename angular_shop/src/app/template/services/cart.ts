@@ -14,6 +14,8 @@ export class CartService {
 
   cart = signal<any[]>(this.loadCart());
 
+  user = signal<any>(null);
+
   addToCart(product: any) {
     console.log("isLoggedIn:", this.isLoggedIn);
     if (this.isLoggedIn) {
