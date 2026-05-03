@@ -7,6 +7,7 @@ import { EditProduct } from './template/edit-product/edit-product';
 import { Cart } from './template/cart/cart';
 import { Productdetail } from './template/productdetail/productdetail';
 import { Register } from './template/register/register';
+import { ChangePassword } from './template/change-password/change-password';
 
 export const routes: Routes = [
     {
@@ -41,5 +42,9 @@ export const routes: Routes = [
     {
         path:"product/:id",
         component:Productdetail
+    },
+    {
+        path:"change-password",
+        component:ChangePassword
     },
 ];

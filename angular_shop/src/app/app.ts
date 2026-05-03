@@ -83,6 +83,10 @@ toggleDropdown() {
       });
   }
 
+  gotochangepassword(){
+    this.router.navigate(['/change-password'])
+  }
+
   search() {
     console.log("SEARCH:", this.keyword);
     this.searchService.keyword.set(this.keyword);

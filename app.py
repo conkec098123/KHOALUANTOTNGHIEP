@@ -201,6 +201,41 @@ def login():
 
     return jsonify({"error": "invalid"}), 401
 
+@app.route("/api/changepassword", methods=["POST"])
+def changepassword():
+    data = request.get_json()
+
+    customer_id = session.get("customer_id")
+    password = data.get('password') 
+    newpassword = data.get('newpassword')
+
+    if not customer_id:
+        return jsonify({"error": "Chưa đăng nhập"}), 401
+
+    if not password or not newpassword:
+        return jsonify({"error": "thiếu dữ liệu"}), 400
+    
+
+    conn = pyodbc.connect(
+        'DRIVER={SQL Server};'
+        f'SERVER={server};'
+        f'DATABASE={database};'
+        'Trusted_Connection=yes;'
+    )
+    cursor = conn.cursor()
+    cursor.execute("SELECT 1 FROM Customer WHERE customer_id = ? AND password = ?", (customer_id, password))
+    if not cursor.fetchone():
+        conn.close()
+        return jsonify({"error": "Password không đúng"}), 400
+    
+    cursor.execute(""" UPDATE Customer SET password = ? WHERE customer_id = ? """, (newpassword, customer_id))
+
+    conn.commit()
+    conn.close()
+    
+    return jsonify({"message": "Đổi mật khẩu thành công"})
+
+
 @app.route('/logout', methods=['POST'])
 def logout():
     session.clear()
@@ -588,7 +623,7 @@ def filter_products():
     params = []
 
     if category:
-        query += " AND p.menu_id = ?"
+        query += " AND p.menu_id = ?"   
         params.append(category)
 
     if keyword:
