@@ -17,23 +17,40 @@ export class CartService {
   user = signal<any>(null);
 
   addToCart(product: any) {
+
+    const item = {
+      product_id: product.product_id,
+      name: product.name,
+      image: product.image,
+      price: Number(product.price),
+      discount_price: Number(product.discount_price || product.price),
+      qty: 1
+    };
+
     console.log("isLoggedIn:", this.isLoggedIn);
+
     if (this.isLoggedIn) {
-      return this.http.post(`${environment.apiUrl}/api/cart/add`, {
-        product_id: product.id,
-        qty: 1
-      }, {
-        withCredentials: true
-      });
+
+      return this.http.post(`${environment.apiUrl}/api/cart/add`,
+        item,
+        { withCredentials: true }
+      );
+
     } else {
-      this.cart.update(item => {
-        const existing = item.find(i => i.id === product.id);
 
-        if (existing) existing.qty += 1;
-        else item.push({ ...product, qty: 1 });
+      this.cart.update(cart => {
 
-        return [...item];
+        const existing = cart.find(i => i.product_id === item.product_id);
+
+        if (existing) {
+          existing.qty += 1;
+        } else {
+          cart.push(item);
+        }
+
+        return [...cart];
       });
+
       this.saveCart();
 
       return of({ message: "local added" });
@@ -41,10 +58,10 @@ export class CartService {
   }
 
   loadCartFromDB() {
-  return this.http.get<any[]>(`${environment.apiUrl}/api/cart`, {
-    withCredentials: true
-  });
-}
+    return this.http.get<any[]>(`${environment.apiUrl}/api/cart`, {
+      withCredentials: true
+    });
+  }
 
   checkLogin() {
     return this.http.get(`${environment.apiUrl}/api/current-user`, {
@@ -59,20 +76,31 @@ export class CartService {
   }
 
   decrease(item: any) {
-    if (item.qty > 1) item.qty--;
-    else this.remove(item.id);
-
-    this.cart.set([...this.cart()]);
+    this.cart.update(items =>
+      items.map(i =>
+        i.product_id === item.product_id
+          ? { ...i, qty: i.qty - 1 }
+          : i
+      )
+    );
     this.saveCart();
   }
 
-  remove(id: number) {
-    this.cart.update(items => items.filter(i => i.id !== id));
+  remove(product_id: number) {
+    this.cart.update(items => items.filter(i => i.product_id !== product_id));
     this.saveCart();
   }
 
   getTotal() {
-    return this.cart().reduce((sum, item) => sum + item.discount_price * item.qty, 0);
+    return this.cart().reduce((sum, item) => {
+
+      const price = Number(item.discount_price ?? item.price ?? 0);
+      const qty = Number(item.qty ?? 0);
+
+      if (isNaN(price) || isNaN(qty)) return sum;
+
+      return sum + price * qty;
+    }, 0);
   }
 
   clear() {
@@ -82,7 +110,15 @@ export class CartService {
 
   loadCart() {
     const data = localStorage.getItem('cart');
-    return data ? JSON.parse(data) : [];
+
+    return data
+      ? JSON.parse(data).map((i: any) => ({
+        ...i,
+        price: Number(i.price || 0),
+        discount_price: Number(i.discount_price || 0),
+        qty: Number(i.qty || 0)
+      }))
+      : [];
   }
 
   saveCart() {

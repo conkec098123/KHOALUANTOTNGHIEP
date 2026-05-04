@@ -75,28 +75,39 @@ export class Login {
   }
   afterLogin(loginRes: any) {
 
-    this.cartService.isLoggedIn = true;
+  this.cartService.isLoggedIn = true;
 
-    this.cartService.loadCartFromDB().subscribe(cartData => {
-      this.cartService.cart.set(cartData);
+  // 1. load user trước (quan trọng hơn cart)
+  this.http.get<any>(
+    `${environment.apiUrl}/api/current-user`,
+    { withCredentials: true }
+  ).subscribe({
+    next: (user) => {
 
-      // LẤY USER TỪ BACKEND
-      this.http.get<any>(
-        `${environment.apiUrl}/api/current-user`,
-        { withCredentials: true }
-      ).subscribe(user => {
+      this.cartService.user.set(user);
 
-        this.cartService.user.set(user); // ✔ đúng
+      // 2. load cart
+      this.cartService.loadCartFromDB().subscribe({
+        next: (cartData) => {
+          this.cartService.cart.set(cartData || []);
 
-        // điều hướng
-        if (loginRes.role === 'admin') {
-          this.router.navigate(['/admin']);
-        } else {
-          this.router.navigate(['/']);
+          const total = this.cartService.getTotal();
+        },
+        error: () => {
+          this.cartService.cart.set([]);
         }
-
       });
 
-    });
-  }
+      // 3. navigate
+      this.router.navigate([
+        loginRes.role === 'admin' ? '/admin' : '/'
+      ]);
+
+    },
+    error: () => {
+      this.cartService.user.set(null);
+      this.router.navigate(['/']);
+    }
+  });
+}
 }

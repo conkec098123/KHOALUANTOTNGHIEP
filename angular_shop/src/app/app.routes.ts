@@ -8,6 +8,7 @@ import { Cart } from './template/cart/cart';
 import { Productdetail } from './template/productdetail/productdetail';
 import { Register } from './template/register/register';
 import { ChangePassword } from './template/change-password/change-password';
+import { PaymentSuccess } from './template/payment-success/payment-success';
 
 export const routes: Routes = [
     {
@@ -46,5 +47,9 @@ export const routes: Routes = [
     {
         path:"change-password",
         component:ChangePassword
+    },
+    {
+        path:"payment-success",
+        component:PaymentSuccess
     },
 ];

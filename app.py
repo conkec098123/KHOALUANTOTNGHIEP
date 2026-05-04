@@ -3,6 +3,10 @@ import traceback
 from flask import Flask, render_template, url_for, request, redirect, session, jsonify
 import pyodbc
 from flask_cors import CORS
+import hashlib
+import hmac
+import urllib.parse
+from datetime import datetime
 
 app = Flask(__name__, static_folder='static')
 app.secret_key = "abc123"
@@ -10,6 +14,11 @@ CORS(app, supports_credentials=True, origins=["http://localhost:4200"])
 
 app.config['SESSION_COOKIE_SAMESITE'] = 'Lax'
 app.config['SESSION_COOKIE_SECURE'] = False
+
+vnp_TmnCode = "E6SARN01"
+vnp_HashSecret = "81Y9ZNK7EFQ8V7SIM613H6A1QCS3ODJE"
+vnp_Url = "https://sandbox.vnpayment.vn/paymentv2/vpcpay.html"
+vnp_ReturnUrl = "http://localhost:4200/payment-success"
 
 server = 'localhost'
 database = 'KHOALUANTOTNGHIEP'
@@ -23,18 +32,6 @@ conn = pyodbc.connect(
 
 cursor = conn.cursor()
 print("Connected successfully!")
-
-@app.route("/")
-def home():
-    conn = pyodbc.connect(
-    'DRIVER={SQL Server};'
-    f'SERVER={server};'
-    f'DATABASE={database};'
-    'Trusted_Connection=yes;')
-    cursor = conn.cursor()
-    cursor.execute("SELECT * FROM Products")
-    products = cursor.fetchall()
-    return render_template("index.html", products=products)
 
 @app.route("/api/products")
 def api_products():
@@ -235,44 +232,10 @@ def changepassword():
     
     return jsonify({"message": "Đổi mật khẩu thành công"})
 
-
 @app.route('/logout', methods=['POST'])
 def logout():
     session.clear()
     return jsonify({"message": "logged out"})
-
-@app.route("/admin")
-def admin():
-
-    conn = pyodbc.connect(
-    'DRIVER={SQL Server};'
-    f'SERVER={server};'
-    f'DATABASE={database};'
-    'Trusted_Connection=yes;')
-    cursor = conn.cursor()
-    cursor.execute("SELECT * FROM Products")
-    products = cursor.fetchall()
-    return render_template("admin.html", products=products)
-
-@app.route("/admin/orders")
-def adminorders():
-
-    conn = pyodbc.connect(
-    'DRIVER={SQL Server};'
-    f'SERVER={server};'
-    f'DATABASE={database};'
-    'Trusted_Connection=yes;')
-    cursor = conn.cursor()
-
-    cursor.execute("""
-        SELECT O.order_id, U.username, O.total_price, O.order_date
-        FROM Orders O
-        JOIN Users U ON O.users_id = U.users_id
-    """)
-
-    orders = cursor.fetchall()
-
-    return render_template("adminorders.html", orders=orders)
 
 @app.route("/api/cart", methods=["GET"])
 def get_cart():
@@ -398,10 +361,17 @@ def merge_cart():
     cursor.execute("DELETE FROM CartDetail WHERE cart_id = ?", (cart_id,))
 
     for item in cart_items:
+
+        product_id = item.get("product_id") or item.get("id")
+        qty = item.get("qty", 1)
+
+        if not product_id:
+            continue
+
         cursor.execute("""
             INSERT INTO CartDetail (cart_id, product_id, qty)
             VALUES (?, ?, ?)
-        """, (cart_id, item["id"], item["qty"]))
+        """, (cart_id, product_id, qty))
 
     conn.commit()
 
@@ -540,71 +510,6 @@ def delete_product(id):
 
     return jsonify({"message": "Xóa thành công"})
 
-@app.route("/checkout/<int:product_id>")
-def checkout(product_id):
-
-    conn = pyodbc.connect(
-    'DRIVER={SQL Server};'
-    f'SERVER={server};'
-    f'DATABASE={database};'
-    'Trusted_Connection=yes;')
-    cursor = conn.cursor()
-    cursor.execute("SELECT * FROM Products WHERE product_id = ?", product_id)
-    product = cursor.fetchone()
-
-    return render_template("checkout.html", product=product)
-
-@app.route("/process_payment/<int:product_id>", methods=["POST"])
-def process_payment(product_id):
-
-    conn = pyodbc.connect(
-    'DRIVER={SQL Server};'
-    f'SERVER={server};'
-    f'DATABASE={database};'
-    'Trusted_Connection=yes;')
-    cursor = conn.cursor()
-    quantity = int(request.form["quantity"])
-    users_id = session["users_id"]
-
-    # Lấy tồn kho hiện tại
-    cursor.execute("SELECT price, stock FROM Products WHERE product_id = ?", (product_id,))
-    product = cursor.fetchone()
-
-    price = product[0]
-    stock = product[1]
-
-    if int(quantity) > stock:
-        return "Không đủ hàng"
-    
-    total = price * quantity
-    
-    cursor.execute("""
-        INSERT INTO Orders (users_id, total_price)
-        VALUES (?, ?)
-    """, (users_id, total))   
-
-    cursor.execute("SELECT @@IDENTITY")
-    order_id = cursor.fetchone()[0]
-
-    cursor.execute("""
-        INSERT INTO Order_Details (order_id, product_id, quantity, price)
-        VALUES (?, ?, ?, ?)
-    """, (order_id, product_id, quantity, price))
-
-    # Trừ tồn kho
-    cursor.execute("""
-        UPDATE Products
-        SET stock = stock - ?
-        WHERE product_id = ?
-    """, (quantity, product_id))
-
-    conn.commit()
-
-    print("Stock before:", stock)
-    print("Quantity:", quantity)
-
-    return "Thanh toán thành công"
-
 @app.route("/api/products/filter", methods=["POST"])
 def filter_products():
     data = request.get_json()
@@ -692,6 +597,207 @@ def filter_products():
         })
 
     return jsonify(products)
+
+@app.route("/api/create-order", methods=["POST"])
+def create_order():
+    data = request.get_json()
+
+    customer_id = session.get("customer_id")
+    cart = data.get("cart")
+    total = data.get("total")
+
+    print("RECEIVED:", data)
+    print("CART:", cart)
+    print("TOTAL:", total)
+
+    if not cart:
+        return jsonify({"error": "Cart rỗng"}), 400
+
+    conn = pyodbc.connect(
+    'DRIVER={SQL Server};'
+    f'SERVER={server};'
+    f'DATABASE={database};'
+    'Trusted_Connection=yes;')
+    cursor = conn.cursor()
+
+    # tạo order
+    cursor.execute("""
+        INSERT INTO Orders (customer_id, total_price, order_status)
+        OUTPUT INSERTED.order_id
+        VALUES (?, ?, 'pending')
+    """, (customer_id, total))
+
+    order_id = cursor.fetchone()[0]
+
+    # insert order detail
+    for item in cart:
+
+        print("CART:", cart)
+
+        print(data)
+
+        print(type(item.get("price")))
+        print(item)
+
+        product_id = item.get("product_id") or item.get("id")
+
+        price = float(item.get("price", 0))
+        discount_price = float(item.get("discount_price", 0))
+        qty = int(item.get("qty", 0))
+
+        subtotal = qty * discount_price
+
+        cursor.execute("""
+            INSERT INTO OrderDetail (
+                order_id, product_id, product_name,
+                product_image, product_price,
+                discount_price, qty, subtotal
+            )
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+        """, (
+        order_id,
+        product_id,
+        item.get("name"),
+        item.get("image"),
+        price,
+        discount_price,
+        qty,
+        subtotal
+    ))
+
+    conn.commit()
+    conn.close()
+
+    return jsonify({"order_id": order_id})
+
+def build_vnpay_hash(data):
+    import urllib.parse
+    return urllib.parse.urlencode(sorted(data.items()))
+
+@app.route("/api/create-payment", methods=["POST"])
+def create_payment():
+    data = request.get_json()
+    amount = data.get("amount", 0)
+    order_id = data.get("order_id")
+
+    if not amount:
+        return jsonify({"error": "missing amount"}), 400
+    
+    amount = float(amount)
+
+    print("AMOUNT FROM FRONTEND:", amount)
+    print("TYPE:", type(amount))
+
+    # Thử tính xem:
+    print("AMOUNT * 100:", int(amount) * 100)
+    print("AMOUNT / 100:", int(amount) / 100)
+
+    
+    
+
+    vnp_Params = {
+        "vnp_Version": "2.1.0",
+        "vnp_Command": "pay",
+        "vnp_TmnCode": vnp_TmnCode,
+        "vnp_Amount": int(float(amount) * 100),
+        "vnp_CurrCode": "VND",
+        "vnp_TxnRef": str(order_id),
+        "vnp_OrderInfo": f"Thanh toan don hang {order_id}",
+        "vnp_OrderType": "other",
+        "vnp_Locale": "vn",
+        "vnp_CreateDate": datetime.now().strftime('%Y%m%d%H%M%S'),
+        "vnp_IpAddr": request.remote_addr,
+        "vnp_ReturnUrl": vnp_ReturnUrl
+    }
+
+    if amount < 1000000:  
+        vnp_Amount = int(amount * 100)
+    else:
+        vnp_Amount = int(amount)
+    hash_data = build_vnpay_hash(vnp_Params)
+
+    # sort params
+    sorted_params = sorted(vnp_Params.items())
+    query_string = urllib.parse.urlencode(sorted_params)
+
+    # tạo hash
+    hash_data = urllib.parse.urlencode(sorted_params, quote_via=urllib.parse.quote_plus)
+    secure_hash = hmac.new(
+        vnp_HashSecret.encode('utf-8'),
+        hash_data.encode('utf-8'),
+        hashlib.sha512
+    ).hexdigest()
+
+    payment_url = f"{vnp_Url}?{query_string}&vnp_SecureHash={secure_hash}"
+
+    print("PARAMS:", vnp_Params)
+    print("QUERY:", query_string)
+    print("HASH STRING:", hash_data)
+    print("SIGN:", secure_hash)
+
+    return jsonify({"payment_url": payment_url})
+
+def create_signature(params, secret):
+    sorted_params = sorted(params.items())
+
+    query_string = urllib.parse.urlencode(sorted_params)
+
+    hash_value = hmac.new(
+        secret.encode('utf-8'),
+        query_string.encode('utf-8'),
+        hashlib.sha512
+    ).hexdigest()
+
+    return hash_value
+
+@app.route("/api/payment-success", methods=["GET"])
+def payment_success():
+    # Lấy tất cả tham số VNPay gửi về
+    query_params = request.args.to_dict()
+    
+    print("===== VNPAY CALLBACK =====")
+    print("FULL QUERY STRING:", request.query_string.decode())
+    print("ALL PARAMS:", query_params)
+    
+    # Lấy chữ ký VNPay gửi sang
+    vnp_SecureHash = query_params.get("vnp_SecureHash")
+    vnp_SecureHashType = query_params.get("vnp_SecureHashType", "")
+    
+    print("RECEIVED HASH:", vnp_SecureHash)
+    print("HASH TYPE:", vnp_SecureHashType)
+    
+    # Loại bỏ 2 tham số chữ ký trước khi tính toán lại
+    if "vnp_SecureHash" in query_params:
+        query_params.pop("vnp_SecureHash")
+    if "vnp_SecureHashType" in query_params:
+        query_params.pop("vnp_SecureHashType")
+    
+    # Sắp xếp theo key A-Z
+    sorted_params = sorted(query_params.items())
+    print("SORTED PARAMS:", sorted_params)
+    
+    # Tạo query string (THEO ĐÚNG ĐỊNH DẠNG URL ENCODE CỦA VNPAY)
+    query_string = "&".join([f"{k}={v}" for k, v in sorted_params])
+    
+    print("CALC SIGN STRING:", query_string)
+    
+    # Tính lại chữ ký
+    computed_hash = hmac.new(
+        vnp_HashSecret.encode('utf-8'),
+        query_string.encode('utf-8'),
+        hashlib.sha512
+    ).hexdigest()
+    
+    print("COMPUTED HASH:", computed_hash)
+    print("COMPARE:", computed_hash == vnp_SecureHash)
+    
+    if computed_hash != vnp_SecureHash:
+        return jsonify({"error": f"Sai chữ ký"}), 400
+    
+    # Xử lý đơn hàng ở đây
+    # Cập nhật trạng thái đơn hàng thành "paid"
+    
+    return jsonify({"message": "Xác thực thành công"})
 
 if __name__ == "__main__":
     app.run(host='localhost', port=5000, debug=True, use_reloader=False, threaded=True) 
