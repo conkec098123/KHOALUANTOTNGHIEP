@@ -1,27 +1,31 @@
-
-<div class="container mt-3">
+<div class="container mt-3" *ngIf="showFilter()">
   <div class="row">
 
     <!-- LEFT: FILTER -->
     <div class="col-3">
+      <button class="btn btn-secondary mb-2 w-100" (click)="showFilter.set(false)">
+        Ẩn bộ lọc
+      </button>
       <div class="card p-3">
-        <h5>Bộ lọc</h5>
-        <p>Giá</p>
-        <p>Hãng</p>
-        <p>RAM</p>
-        <div *ngFor="let r of [8,16,32]">
-          <input type="checkbox" (change)="onFilterChange('ram', r, $event)">
-          {{ r }} GB
-        </div>
-        <p>CPU</p>
-        <div *ngFor="let c of ['i3','i5','i7']">
-          <input type="checkbox" (change)="onFilterChange('cpu', c, $event)">
-          {{ c }}
+
+        <div class="col-3" *ngIf="showFilter()">
+          <p>Giá</p>
+          <p>Hãng</p>
+          <p>RAM</p>
+          <div *ngFor="let r of [8,16,32]">
+            <input type="checkbox" (change)="onFilterChange('ram', r, $event)">
+            {{ r }} GB
           </div>
-        <p>SSD</p>
-        <div *ngFor="let s of [256,512,1024]">
-          <input type="checkbox" (change)="onFilterChange('ssd', s, $event)">
-          {{ s >= 1024 ? (s/1024 + 'TB') : s + 'GB' }}
+          <p>CPU</p>
+          <div *ngFor="let c of ['i3','i5','i7']">
+            <input type="checkbox" (change)="onFilterChange('cpu', c, $event)">
+            {{ c }}
+          </div>
+          <p>SSD</p>
+          <div *ngFor="let s of [256,512,1024]">
+            <input type="checkbox" (change)="onFilterChange('ssd', s, $event)">
+            {{ s >= 1024 ? (s/1024 + 'TB') : s + 'GB' }}
+          </div>
         </div>
       </div>
     </div>
@@ -37,29 +41,74 @@
       </div>
 
 
+
+      <div class="row">
+
+        @for (product of products(); track product.product_id) {
+
+        <div class="col-3 mb-3">
+          <div class="card p-2 h-100">
+
+
+            <img [src]="product.image" class="card-img-top product-img">
+
+            <div class="card-body d-flex flex-column">
+              <h6>{{ product.name }}</h6>
+              <p class="strikeout">Giá: {{ product.price | number:'1.0-0' }} đ</p>
+              <p>Giảm: {{ product.discount_price | number:'1.0-0' }} đ</p>
+              <div class="d-flex gap-2 mt-auto">
+                <button class="btn btn-primary" (click)="addToCart(product)">Thêm</button>
+                <button class="btn btn-primary mt-2" (click)="viewDetail(product)">Xem chi tiết</button>
+              </div>
+
+            </div>
+          </div>
+        </div>
+        }
+      </div>
+
     </div>
+  </div>
+</div>
+<!-- ẩn -->
+<div class="container mt-3" *ngIf="!showFilter()">
+  <div class="row">
 
-    <!-- PRODUCTS -->
-    <div class="row mt-3">
+    <!--(fake khi ẩn) -->
+    <div class="col-3">
+      <button class="btn btn-secondary mb-2 w-100" (click)="showFilter.set(true)">
+        Hiện bộ lọc
+      </button>
+    </div>
+    <div class="col-9">
+      <div class="card p-3 mb-3">
+        <h5>Chọn theo nhu cầu</h5>
+        <button class="btn btn-outline-primary m-1" (click)="setCategory(2)">Gaming</button>
+        <button class="btn btn-outline-primary m-1" (click)="setCategory(3)">Văn phòng</button>
+        <button class="btn btn-outline-primary m-1" (click)="setCategory(4)">Sinh viên</button>
+      </div>
+    </div>
+    </div>
+    <div class="row">
       @for (product of products(); track product.product_id) {
-      <div class="col-3 mb-3">
-        <div class="card p-2">
-
+      <div class="product-col mb-3">
+        <div class="card p-2 h-100 d-flex flex-column">
           <img [src]="product.image" class="card-img-top product-img">
 
-          <div class="card-body">
+          <div class="card-body d-flex flex-column">
             <h6>{{ product.name }}</h6>
             <p class="strikeout">Giá: {{ product.price | number:'1.0-0' }} đ</p>
             <p>Giảm: {{ product.discount_price | number:'1.0-0' }} đ</p>
+            <div class="d-flex gap-2 mt-auto">
+              <button class="btn btn-primary" (click)="addToCart(product)">Thêm</button>
+              <button class="btn btn-primary mt-2" (click)="viewDetail(product)">Xem chi tiết</button>
+            </div>
 
-            <button class="btn btn-primary" (click)="addToCart(product)">Thêm</button>
-            <button class="btn btn-primary ms-2" (click)="viewDetail(product)">Xem chi tiết</button>
           </div>
-
         </div>
       </div>
       }
     </div>
+  
 
-  </div>
 </div>

@@ -28,6 +28,8 @@ export class CartService {
     };
 
     console.log("isLoggedIn:", this.isLoggedIn);
+    console.log(item);
+    console.log(product);
 
     if (this.isLoggedIn) {
 
@@ -76,20 +78,43 @@ export class CartService {
   }
 
   decrease(item: any) {
-    this.cart.update(items =>
-      items.map(i =>
-        i.product_id === item.product_id
-          ? { ...i, qty: i.qty - 1 }
-          : i
-      )
-    );
-    this.saveCart();
+
+  item.qty -= 1;
+
+  if (item.qty <= 0) {
+    this.remove(item.product_id);
+  } else {
+    this.cart.set([...this.cart()]);
   }
 
+  this.saveCart();
+}
+
   remove(product_id: number) {
-    this.cart.update(items => items.filter(i => i.product_id !== product_id));
+
+  if (this.isLoggedIn) {
+
+    this.http.post(
+      `${environment.apiUrl}/api/cart/remove`,
+      { product_id },
+      { withCredentials: true }
+    ).subscribe(() => {
+
+      this.cart.update(items =>
+        items.filter(i => i.product_id !== product_id)
+      );
+
+    });
+
+  } else {
+
+    this.cart.update(items =>
+      items.filter(i => i.product_id !== product_id)
+    );
+
     this.saveCart();
   }
+}
 
   getTotal() {
     return this.cart().reduce((sum, item) => {

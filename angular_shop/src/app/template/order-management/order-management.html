@@ -1,0 +1,64 @@
+<div class="dropdown">
+  <button class="btn btn-light" (click)="toggleDropdown()">
+    <div class="d-flex align-items-center me-3">
+      <span>Click</span>
+    </div>
+
+  </button>
+
+  <ul *ngIf="isOpen" class="dropdown-menu show">
+    <li>
+      <a class="dropdown-item">Tất cả</a>
+    </li>
+    <li>
+      <a class="dropdown-item">Đơn đợi xác nhận</a>
+    </li>
+    <li>
+      <a class="dropdown-item">Đơn đang giao</a>
+    </li>
+    <li>
+      <a class="dropdown-item">Đơn đã giao</a>
+    </li>
+    <li>
+      <a class="dropdown-item text-danger">Đơn đã hủy</a>
+    </li>
+  </ul>
+  @for (order of orders(); track order.order_id) {
+
+<div class="card mb-3 shadow-sm" (click)="gotoOrderDetail(order.order_id)"
+  style="cursor:pointer">
+
+  <div class="card-body">
+
+    <div class="d-flex justify-content-between">
+
+      <div>
+        <div class="fw-bold">
+          Đơn hàng #{{ order.order_id }}
+        </div>
+
+        <div>
+          {{ order.created_at }}
+        </div>
+      </div>
+
+      <div class="text-end">
+
+        <div class="text-success fw-bold">
+          {{ order.total_price }}
+        </div>
+
+        <span class="badge bg-primary">
+          {{ order.order_status }}
+        </span>
+
+      </div>
+
+    </div>
+
+  </div>
+
+</div>
+
+}
+</div>

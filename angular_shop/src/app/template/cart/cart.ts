@@ -1,4 +1,4 @@
-import { Component } from '@angular/core';
+import { Component, signal } from '@angular/core';
 import { CartService } from '../services/cart';
 import { HttpClient } from '@angular/common/http';
 import { environment } from '../../../environments/environment';
@@ -18,44 +18,13 @@ export class Cart {
 
   isLoggedIn = false;
 
-  // addToCart(product: any) {
+  addresses = signal<any[]>([]);
 
-  //   const item = {
-  //     product_id: product.product_id,
-  //     name: product.name,
-  //     image: product.image,
-  //     price: product.price,
-  //     discount_price: product.discount_price,
-  //     qty: 1
-  //   };
+  ngOnInit() {
 
-  //   if (this.isLoggedIn) {
+    this.loadAddress();
 
-  //     return this.http.post(`${environment.apiUrl}/api/cart/add`,
-  //       {
-  //         product_id: item.product_id,
-  //         qty: item.qty
-  //       },
-  //       { withCredentials: true }
-  //     );
-
-  //   } else {
-
-  //     let cart = JSON.parse(localStorage.getItem("cart") || "[]");
-
-  //     const exist = cart.find((p: any) => p.product_id === item.product_id);
-
-  //     if (exist) {
-  //       exist.qty += 1;
-  //     } else {
-  //       cart.push(item);
-  //     }
-
-  //     localStorage.setItem("cart", JSON.stringify(cart));
-
-  //     return of({ message: "local added" });
-  //   }
-  // }
+  }
 
   getCart() {
     if (this.isLoggedIn) {
@@ -90,6 +59,36 @@ export class Cart {
           window.location.href = res.payment_url;
         });
       });
+  }
+
+  gotoaddress() {
+    this.router.navigate(['/address']);
+  }
+
+  loadAddress() {
+
+    if (!this.cartService.isLoggedIn) return;
+
+    this.http.get<any[]>(
+      `${environment.apiUrl}/api/select/address`,
+      {
+        withCredentials: true
+      }
+
+    ).subscribe({
+
+      next: (res) => {
+
+        this.addresses.set(res);
+
+      },
+
+      error: () => {
+
+      }
+
+    });
+
   }
 }
 

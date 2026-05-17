@@ -27,6 +27,8 @@ export class Home implements OnInit {
 
   cart = signal<string[]>([]);
 
+  showFilter = signal(false);
+
 
 
   filters: FilterType = {
@@ -42,22 +44,40 @@ export class Home implements OnInit {
     private cartService: CartService,
     private router: Router,
     private searchService: SearchService) {
-      effect(() => {
+    effect(() => {
       const keyword = this.searchService.keyword();
       this.loadProducts(keyword);
     });
-     }
+  }
 
   addToCart(product: any) {
+
     this.cartService.addToCart(product)
       .subscribe({
+
         next: (res: any) => {
+
           console.log("SUCCESS:", res);
+
+          if (this.cartService.isLoggedIn) {
+
+            this.cartService.loadCartFromDB()
+              .subscribe(data => {
+
+                this.cartService.cart.set(data);
+
+              });
+
+          }
+
         },
+
         error: (err) => {
           console.log("ERROR:", err);
         }
+
       });
+
   }
 
   viewDetail(product: any) {
@@ -66,14 +86,14 @@ export class Home implements OnInit {
   }
 
   loadProducts(keyword: string = '') {
-  this.http.post(`${environment.apiUrl}/api/products/filter`, {
-    keyword: keyword,
-    category: this.category,
-    ...this.filters
-  }).subscribe((res: any) => {
-    this.products.set(res);
-  });
-}
+    this.http.post(`${environment.apiUrl}/api/products/filter`, {
+      keyword: keyword,
+      category: this.category,
+      ...this.filters
+    }).subscribe((res: any) => {
+      this.products.set(res);
+    });
+  }
 
   onFilterChange(type: keyof FilterType, value: any, event: any) {
 

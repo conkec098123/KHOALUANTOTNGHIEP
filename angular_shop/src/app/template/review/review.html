@@ -1,0 +1,21 @@
+<div class="text-center mt-5">
+  @for (i of [1,2,3,4,5]; track i) {
+
+  <i class="bi"
+     [class.bi-star-fill]="i <= rating()"
+     [class.bi-star]="i > rating()"
+     (click)="rating.set(i)"
+     style="cursor:pointer; color: gold;">
+  </i>
+
+}
+<div class="container align-items-center justify-content-cente">
+<textarea
+  (input)="comment.set($any($event.target).value)" class="form-control">
+</textarea>
+<button (click)="submitReview()" class="btn btn-primary mt-5">
+    gửi thông tin đánh giá
+  </button>
+</div>
+</div>
+

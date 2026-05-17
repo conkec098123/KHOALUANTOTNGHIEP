@@ -1,5 +1,5 @@
 import { HttpClient } from '@angular/common/http';
-import { Component } from '@angular/core';
+import { Component, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
 import { environment } from '../../../environments/environment';
@@ -12,6 +12,7 @@ import { CartService } from '../services/cart';
   styleUrl: './payment-success.css',
 })
 export class PaymentSuccess {
+
   constructor(private http: HttpClient,
     private route: ActivatedRoute,
     private router: Router,
@@ -27,7 +28,7 @@ export class PaymentSuccess {
       console.log("Thanh toán thành công");
     });
   }
-gotohome() {
+  gotohome() {
     this.http.get<any>(`${environment.apiUrl}/api/current-user`,
       { withCredentials: true }
     ).subscribe(user => {
@@ -36,5 +37,8 @@ gotohome() {
 
       this.router.navigate(['/']);
     }
-  )};
+    )
+  };
+
+  
 }

@@ -3,9 +3,14 @@
     <h3 class="text-center mb-4">Đăng nhập</h3>
 
     <form>
+      <p>username</p>
       <input class="form-control mb-3" [(ngModel)]="username" name="username">
+      <p>password</p>
       <input class="form-control mb-3" [(ngModel)]="password" name="password">
-      <div class="mb-3"><span >bạn chưa có tài khoản?</span> <button class="btn btn-link" (click)="gotoregister()">đăng ký</button></div>
+      <div class="mb-3">
+        <button class="btn btn-link" (click)="gotoforgetpassword()">quên mật khẩu</button>
+        <button class="btn btn-link" (click)="gotoregister()">đăng ký</button>
+      </div>
 
       <button (click)="login()" class="btn btn-primary w-100">Đăng nhập</button>
     </form>

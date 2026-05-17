@@ -1,18 +1,17 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 
-import { PaymentSuccess } from './payment-success';
+import { OrderManagement } from './order-management';
 
-describe('PaymentSuccess', () => {
-
-  let component: PaymentSuccess;
-  let fixture: ComponentFixture<PaymentSuccess>;
+describe('OrderManagement', () => {
+  let component: OrderManagement;
+  let fixture: ComponentFixture<OrderManagement>;
 
   beforeEach(async () => {
     await TestBed.configureTestingModule({
-      imports: [PaymentSuccess],
+      imports: [OrderManagement],
     }).compileComponents();
 
-    fixture = TestBed.createComponent(PaymentSuccess);
+    fixture = TestBed.createComponent(OrderManagement);
     component = fixture.componentInstance;
     await fixture.whenStable();
   });

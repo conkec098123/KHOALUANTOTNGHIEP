@@ -1,0 +1,43 @@
+<div class="container vh-100 d-flex justify-content-center align-items-center">
+    <div class="card p-4 shadow" style="width: 700px;">
+    <div class="row">
+<div class="col-2">
+<div class="ms-4 mb-3">avatar</div>
+<img [src]="environment.apiUrl + avatar()" 
+    class="rounded-circle mb-3"
+  width="110"
+  height="110">
+<input 
+  type="file"
+  class="form-control"
+  (change)="onFileSelected($event)"
+  style="width: 100px;">
+</div>
+<div class="col-3">
+<div>full name</div>
+<input class="form-control mb-3" [ngModel]="full_name()"
+  (ngModelChange)="full_name.set($event)">
+<div>phone_number</div>
+<input class="form-control mb-3" [ngModel]="phone_number()"
+  (ngModelChange)="phone_number.set($event)">
+<div>gender</div>
+<select class="form-select mb-3" [ngModel]="gender()"
+        (ngModelChange)="gender.set($event)">
+    <option>Nam</option>
+    <option>Nữ</option>
+</select>
+</div>
+<div class="col-7">
+<div>email</div>
+<input class="form-control mb-3" [ngModel]="email()"
+  (ngModelChange)="email.set($event)">
+<div>dob</div>
+<input type="date" class="form-control mb-3" [ngModel]="dob()"
+  (ngModelChange)="dob.set($event)">
+</div>
+<button class="btn btn-primary w-100" (click)="changeprofile()">
+          Lưu thay đổi
+        </button>
+        </div>
+</div>
+</div>

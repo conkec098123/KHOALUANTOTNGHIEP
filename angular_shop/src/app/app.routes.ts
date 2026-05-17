@@ -9,6 +9,13 @@ import { Productdetail } from './template/productdetail/productdetail';
 import { Register } from './template/register/register';
 import { ChangePassword } from './template/change-password/change-password';
 import { PaymentSuccess } from './template/payment-success/payment-success';
+import { ForgetPassword } from './template/forget-password/forget-password';
+import { ResetPassword } from './template/reset-password/reset-password';
+import { Profile } from './template/profile/profile';
+import { Address } from './template/address/address';
+import { OrderManagement } from './template/order-management/order-management';
+import { OrderDetail } from './template/order-detail/order-detail';
+import { Review } from './template/review/review';
 
 export const routes: Routes = [
     {
@@ -51,5 +58,33 @@ export const routes: Routes = [
     {
         path:"payment-success",
         component:PaymentSuccess
+    },
+    {
+        path:"forget-password",
+        component:ForgetPassword
+    },
+    {
+        path:"reset-password",
+        component:ResetPassword
+    },
+    {
+        path:"profile",
+        component:Profile
+    },
+    {
+        path:"address",
+        component:Address
+    },
+    {
+        path:"order-management",
+        component:OrderManagement
+    },
+    {
+        path:"order-detail/:id",
+        component:OrderDetail
+    },
+    {
+        path:"review/:id",
+        component:Review
     },
 ];

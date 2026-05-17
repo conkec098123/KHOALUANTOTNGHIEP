@@ -31,17 +31,21 @@ export class App implements OnInit {
 
   cart = signal<string[]>([]);
 
+  avatar = signal<string>('');
+
   keyword: string = '';
 
+  environment = environment
+
   get user() {
-  return this.cartService.user;
-}
+    return this.cartService.user;
+  }
 
   filters: FilterType = {
     ram: [],
     ssd: [],
     cpu: []
-  };  
+  };
 
   category: number | null = null;
 
@@ -61,30 +65,57 @@ export class App implements OnInit {
   }
 
   ngOnInit() {
-    
+
+  if (this.cartService.isLoggedIn) {
+
+    this.http.get<any>(
+      `${environment.apiUrl}/api/profile`,
+      { withCredentials: true }
+
+    ).subscribe(res => {
+
+      this.full_name.set(res.full_name);
+      this.avatar.set(res.avatar);
+
+    });
 
   }
 
-  
+}
+
+
 
   isOpen = false;
 
-toggleDropdown() {
-  this.isOpen = !this.isOpen;
-}
-
-  logout() {
-    this.http.post(`${environment.apiUrl}/logout`, {}, { withCredentials: true })
-      .subscribe(() => {
-        this.cartService.user.set(null);
-        this.cartService.cart.set([]);
-        this.isOpen = false;
-        this.router.navigate(['/']);
-      });
+  toggleDropdown() {
+    this.isOpen = !this.isOpen;
   }
 
-  gotochangepassword(){
+  logout() {
+    if (confirm("xác nhận đăng xuất")) {
+      this.http.post(`${environment.apiUrl}/logout`, {}, { withCredentials: true })
+        .subscribe(() => {
+          this.cartService.user.set(null);
+          this.cartService.cart.set([]);
+          this.isOpen = false;
+          this.router.navigate(['/']);
+        });
+    }
+  }
+
+  gotochangepassword() {
     this.router.navigate(['/change-password'])
+    this.isOpen = false;
+  }
+
+  gotoprofile() {
+    this.router.navigate(['/profile'])
+    this.isOpen = false;
+  }
+
+  gotoordermanagement() {
+    this.router.navigate(['/order-management'])
+    this.isOpen = false;
   }
 
   search() {

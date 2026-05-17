@@ -25,6 +25,9 @@ export class Login {
   gotoregister() {
     this.router.navigate(['/register'])
   }
+  gotoforgetpassword() {
+    this.router.navigate(['/forget-password'])
+  }
 
   login() {
 

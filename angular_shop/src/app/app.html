@@ -15,30 +15,46 @@
         <div class="d-flex justify-content-end">
 
           <!-- nếu chưa login -->
-          <a *ngIf="!cartService.user()" class="nav-link" routerLink="login">Login</a>
+          <a *ngIf="!cartService.user()" class="nav-link mt-2" routerLink="login">Login</a>
 
           <div *ngIf="cartService.user()" class="dropdown">
-
             <button class="btn btn-light" (click)="toggleDropdown()">
-              Welcome {{ cartService.user()?.name }}
+              <div class="d-flex align-items-center me-3">
+
+    <img 
+      [src]="environment.apiUrl + avatar()"
+      class="rounded-circle me-2"
+      width="40"
+      height="40"
+      style="object-fit: cover;">
+
+    <span>Welcome {{ cartService.user()?.name }}</span>
+
+  </div>
             </button>
 
             <ul *ngIf="isOpen" class="dropdown-menu show">
               <li>
-                <a class="dropdown-item" (click)="logout()">Đăng xuất</a>
+                <a class="dropdown-item" (click)="gotoprofile()">Quản lý tài khoản</a>
+              </li>
+              <li>
+                <a class="dropdown-item" (click)="gotoordermanagement()">Quản lý đơn hàng</a>
               </li>
               <li>
                 <a class="dropdown-item" (click)="gotochangepassword()">Đổi mật khẩu</a>
+              </li>
+              <li>
+                <a class="dropdown-item" (click)="logout()">Đăng xuất</a>
               </li>
             </ul>
           </div>
 
         </div>
         <li class="nav-item">
-          <a class="nav-link active" aria-current="page" href="#">Home</a>
+          <a class="nav-link active mt-2" aria-current="page" href="#">Home</a>
         </li>
         <li class="nav-item">
-          <a class="nav-link" routerLink="cart">cart</a>
+          <a class="nav-link mt-2" routerLink="cart">cart</a>
         </li>
       </ul>
     </div>

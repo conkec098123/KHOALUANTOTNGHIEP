@@ -6,7 +6,13 @@ from flask_cors import CORS
 import hashlib
 import hmac
 import urllib.parse
-from datetime import datetime
+from datetime import datetime, timedelta
+import uuid
+import smtplib
+from email.mime.text import MIMEText
+import os
+from werkzeug.utils import secure_filename
+
 
 app = Flask(__name__, static_folder='static')
 app.secret_key = "abc123"
@@ -32,6 +38,8 @@ conn = pyodbc.connect(
 
 cursor = conn.cursor()
 print("Connected successfully!")
+
+UPLOAD_FOLDER = "static/uploads"
 
 @app.route("/api/products")
 def api_products():
@@ -59,6 +67,8 @@ def api_products():
             "image": p[4],
             "qty": p[5]
         })
+
+    conn.close()
 
     return jsonify(data)
 
@@ -264,7 +274,7 @@ def get_cart():
     result = []
     for item in items:
         result.append({
-            "id": item[0],
+            "product_id": item[0],
             "name": item[1],
             "price": item[2],
             "qty": item[3]
@@ -374,8 +384,42 @@ def merge_cart():
         """, (cart_id, product_id, qty))
 
     conn.commit()
+    conn.close()
 
     return jsonify({"message": "overwrite success"})
+
+@app.route("/api/cart/remove", methods=["POST"])
+def remove_cart_item():
+
+    if "customer_id" not in session:
+        return jsonify({"error": "not login"}), 401
+
+    data = request.get_json()
+
+    product_id = data["product_id"]
+
+    customer_id = session["customer_id"]
+
+    conn = pyodbc.connect(
+        'DRIVER={SQL Server};'
+        f'SERVER={server};'
+        f'DATABASE={database};'
+        'Trusted_Connection=yes;'
+    )
+
+    cursor = conn.cursor()
+
+    cursor.execute("""
+        DELETE cd
+        FROM CartDetail cd
+        JOIN Cart c ON cd.cart_id = c.cart_id
+        WHERE c.customer_id = ? AND cd.product_id = ?
+    """, (customer_id, product_id))
+
+    conn.commit()
+    conn.close()
+
+    return jsonify({"message": "removed"})
 
 @app.route("/add_product", methods=["POST"])
 def add_product():
@@ -520,6 +564,13 @@ def filter_products():
     category = data.get("category")
     keyword = data.get("keyword", "")
 
+    conn = pyodbc.connect(
+    'DRIVER={SQL Server};'
+    f'SERVER={server};'
+    f'DATABASE={database};'
+    'Trusted_Connection=yes;')
+    cursor = conn.cursor()
+
     query = """
     SELECT DISTINCT p.*
     FROM Product p
@@ -580,7 +631,10 @@ def filter_products():
     print("QUERY:", query)
     print("PARAMS:", params)
 
-    cursor.execute(query, params)
+    if params:
+        cursor.execute(query, params)
+    else:
+        cursor.execute(query)
     rows = cursor.fetchall()
 
     products = []
@@ -595,6 +649,9 @@ def filter_products():
             "price": r[7],
             "discount_price": r[8]
         })
+
+
+    conn.close()
 
     return jsonify(products)
 
@@ -620,7 +677,6 @@ def create_order():
     'Trusted_Connection=yes;')
     cursor = conn.cursor()
 
-    # tạo order
     cursor.execute("""
         INSERT INTO Orders (customer_id, total_price, order_status)
         OUTPUT INSERTED.order_id
@@ -629,7 +685,6 @@ def create_order():
 
     order_id = cursor.fetchone()[0]
 
-    # insert order detail
     for item in cart:
 
         print("CART:", cart)
@@ -750,7 +805,7 @@ def create_signature(params, secret):
 
     return hash_value
 
-@app.route("/api/payment-success", methods=["GET"])
+@app.route("/api/payment-success", methods=["POST"])
 def payment_success():
     # Lấy tất cả tham số VNPay gửi về
     query_params = request.args.to_dict()
@@ -798,6 +853,451 @@ def payment_success():
     # Cập nhật trạng thái đơn hàng thành "paid"
     
     return jsonify({"message": "Xác thực thành công"})
+
+@app.route("/api/forgot-password", methods=["POST"])
+def forgot_password():
+    data = request.get_json()
+    email = data.get("email", "").strip().lower()
+
+    conn = pyodbc.connect(
+    'DRIVER={SQL Server};'
+    f'SERVER={server};'
+    f'DATABASE={database};'
+    'Trusted_Connection=yes;')
+    cursor = conn.cursor()
+
+    cursor.execute("SELECT customer_id FROM Customer WHERE LOWER(email) = ?", (email,))
+    user = cursor.fetchone()
+
+    print("EMAIL NHẬN:", email)
+
+    if not user:
+        return jsonify({"message": "Email không tồn tại"}), 404
+
+    customer_id = user[0]
+
+    token = str(uuid.uuid4())
+    expired_at = datetime.now() + timedelta(minutes=10)
+
+    cursor.execute("""
+        INSERT INTO PasswordReset (customer_id, token, expired_at)
+        VALUES (?, ?, ?)
+    """, (customer_id, token, expired_at))
+
+    conn.commit()
+
+    # link gửi mail (tạm thời print)
+    reset_link = f"http://localhost:4200/reset-password?token={token}"
+
+    send_email(email, reset_link)
+
+    print("RESET LINK:", reset_link)
+
+    return jsonify({"message": "Đã gửi mail reset (check console)"})
+
+@app.route("/api/reset-password", methods=["POST"])
+def reset_password():
+    data = request.get_json()
+    token = data.get("token")
+    new_password = data.get("password")
+
+    conn = pyodbc.connect(
+    'DRIVER={SQL Server};'
+    f'SERVER={server};'
+    f'DATABASE={database};'
+    'Trusted_Connection=yes;')
+    cursor = conn.cursor()
+
+    print("TOKEN NHẬN:", token)
+
+    cursor.execute("""
+        SELECT customer_id, expired_at, used
+        FROM PasswordReset
+        WHERE token = ?
+    """, (token,))
+
+    reset = cursor.fetchone()
+
+    if not reset:
+        return jsonify({"error": "Token không tồn tại"}), 400
+
+    customer_id, expired_at, used = reset
+
+    if used:
+        return jsonify({"error": "Token đã dùng"}), 400
+
+    if expired_at < datetime.now():
+        return jsonify({"error": "Token hết hạn"}), 400
+
+    # update password
+    cursor.execute("""
+        UPDATE Customer
+        SET password = ?
+        WHERE customer_id = ?
+    """, (new_password, customer_id))
+
+    # đánh dấu đã dùng
+    cursor.execute("""
+        UPDATE PasswordReset
+        SET used = 1
+        WHERE token = ?
+    """, (token,))
+
+    conn.commit()
+
+    return jsonify({"message": "Đổi mật khẩu thành công"})
+
+def send_email(to_email, reset_link):
+    sender = "conkec2741@gmail.com"
+    app_password = "wigi bpqh dbql kjfp"
+
+    msg = MIMEText(f"Click để reset password:\n{reset_link}")
+    msg["Subject"] = "Reset Password"
+    msg["From"] = sender
+    msg["To"] = to_email
+
+    with smtplib.SMTP_SSL("smtp.gmail.com", 465) as server:
+        server.login(sender, app_password)
+        server.send_message(msg)
+
+@app.route("/api/profile", methods=["GET"])
+def profile():
+
+    customer_id = session.get("customer_id")
+
+    if not customer_id:
+        return jsonify({"error": "Chưa đăng nhập"}), 401
+
+    conn = pyodbc.connect(
+        'DRIVER={SQL Server};'
+        f'SERVER={server};'
+        f'DATABASE={database};'
+        'Trusted_Connection=yes;'
+    )
+    cursor = conn.cursor()
+
+    cursor.execute("""
+        SELECT full_name, email, phone_number,
+               dob, gender, avatar
+        FROM Customer
+        WHERE customer_id = ?
+    """, (customer_id,))
+
+    user = cursor.fetchone()
+
+    if not user:
+        return jsonify({"error": "Không tìm thấy user"}), 404
+
+    return jsonify({
+        "full_name": user.full_name,
+        "email": user.email,
+        "phone_number": user.phone_number,
+        "dob": user.dob,
+        "gender": user.gender,
+        "avatar": user.avatar
+    })
+
+@app.route("/api/customer/profile", methods=["PUT"])
+def info_customer():
+    data = request.get_json()
+    customer_id = session.get("customer_id")
+    full_name = data.get("full_name")
+    email = data.get("email")
+    phone_number = data.get("phone_number")
+    dob = data.get("dob")
+    gender = data.get("gender")
+
+    if not customer_id:
+        return jsonify({"error": "chưa đăng nhập"}), 401
+    
+    conn = pyodbc.connect(
+        'DRIVER={SQL Server};'
+        f'SERVER={server};'
+        f'DATABASE={database};'
+        'Trusted_Connection=yes;'
+    )
+    cursor = conn.cursor()
+
+    cursor.execute("SELECT 1 FROM Customer WHERE customer_id = ?", (customer_id,))
+    if not cursor.fetchone():
+        return jsonify({"error": "không tìm thấy người dùng"}), 404
+    
+    cursor.execute("""UPDATE Customer 
+                   SET full_name = ?,
+                   email = ?,
+                   phone_number = ?,
+                   dob = ?,
+                   gender = ?
+                   WHERE customer_id = ?""", (full_name, email, phone_number, dob, gender, customer_id))
+    
+    conn.commit()
+    conn.close()
+
+    return jsonify({"message": "thay đổi thông tin thành công"})
+
+@app.route("/upload-avatar", methods=["POST"])
+def upload_avatar():
+
+    file = request.files["avatar"]
+
+    customer_id = session.get("customer_id")
+
+    if not file:
+        return jsonify({"error": "Không có file"}), 400
+
+    filename = f"{uuid.uuid4()}_{secure_filename(file.filename)}"
+
+    filepath = os.path.join(UPLOAD_FOLDER, filename)
+
+    file.save(filepath)
+
+    avatar_url = f"/static/uploads/{filename}"
+
+    conn = pyodbc.connect(
+        'DRIVER={SQL Server};'
+        f'SERVER={server};'
+        f'DATABASE={database};'
+        'Trusted_Connection=yes;'
+    )
+    cursor = conn.cursor()
+
+    cursor.execute("""UPDATE Customer
+                   SET avatar = ?
+                   WHERE customer_id = ?""", (avatar_url, customer_id),)
+    
+    conn.commit()
+    conn.close()
+
+    return jsonify({
+        "avatar_url": f"/static/uploads/{filename}"
+    })
+
+@app.route("/api/address", methods=["PUT"])
+def address():
+    data = request.get_json()
+    customer_id = session.get("customer_id")
+    receiver_name = data.get("receiver_name")
+    phone_number = data.get("phone_number")
+    address = data.get("address")
+
+    if not customer_id:
+        return jsonify({"error": "chưa đăng nhập"}), 401
+    
+    conn = pyodbc.connect(
+        'DRIVER={SQL Server};'
+        f'SERVER={server};'
+        f'DATABASE={database};'
+        'Trusted_Connection=yes;'
+    )
+    cursor = conn.cursor()
+
+    cursor.execute("""
+        SELECT address_id
+        FROM Address
+        WHERE customer_id = ?
+    """, (customer_id,))
+
+    existing = cursor.fetchone()
+    if existing:
+
+        cursor.execute("""
+            UPDATE Address
+            SET receiver_name = ?,
+                phone_number = ?,
+                address = ?
+            WHERE customer_id = ?
+        """, (
+            receiver_name,
+            phone_number,
+            address,
+            customer_id
+        ))
+
+    # chưa có thì thêm mới
+    else:
+
+        cursor.execute("""
+            INSERT INTO Address (
+                customer_id,
+                receiver_name,
+                phone_number,
+                address
+            )
+            VALUES (?, ?, ?, ?)
+        """, (
+            customer_id,
+            receiver_name,
+            phone_number,
+            address
+        ))
+    conn.commit()
+    conn.close()
+
+    return jsonify({"message": "thay đổi thành công"})
+
+@app.route("/api/select/address", methods=["GET"])
+def get_address():
+
+    customer_id = session.get("customer_id")
+
+    if not customer_id:
+        return jsonify({"error": "chưa đăng nhập"}), 401
+
+    conn = pyodbc.connect(
+        'DRIVER={SQL Server};'
+        f'SERVER={server};'
+        f'DATABASE={database};'
+        'Trusted_Connection=yes;'
+    )
+
+    cursor = conn.cursor()
+
+    cursor.execute("""
+        SELECT *
+        FROM Address
+        WHERE customer_id = ?
+    """, (customer_id,))
+
+    rows = cursor.fetchall()
+
+    result = []
+
+    for row in rows:
+
+        result.append({
+            "address_id": row.address_id,
+            "receiver_name": row.receiver_name,
+            "phone_number": row.phone_number,
+            "address": row.address
+        })
+
+    conn.close()
+
+    return jsonify(result)
+
+@app.route("/api/orders", methods=["GET"])
+def get_orders():
+
+    customer_id = session.get("customer_id")
+
+    if not customer_id:
+        return jsonify({"error": "chưa đăng nhập"}), 401
+
+    conn = pyodbc.connect(
+        'DRIVER={SQL Server};'
+        f'SERVER={server};'
+        f'DATABASE={database};'
+        'Trusted_Connection=yes;'
+    )
+
+    cursor = conn.cursor()
+
+    cursor.execute("""
+        SELECT order_id,
+               total_price,
+               order_status,
+               created_at
+        FROM Orders
+        WHERE customer_id = ?
+        ORDER BY created_at DESC
+    """, (customer_id,))
+
+    rows = cursor.fetchall()
+
+    orders = []
+
+    for row in rows:
+        orders.append({
+            "order_id": row[0],
+            "total_price": float(row[1]),
+            "order_status": row[2],
+            "created_at": row[3]
+        })
+
+    conn.close()
+
+    return jsonify(orders)
+
+@app.route("/api/order-detail/<int:order_id>", methods=["GET"])
+def order_detail(order_id):
+
+    customer_id = session.get("customer_id")
+
+    if not customer_id:
+        return jsonify({"error": "chưa đăng nhập"}), 401
+
+    conn = pyodbc.connect(
+        'DRIVER={SQL Server};'
+        f'SERVER={server};'
+        f'DATABASE={database};'
+        'Trusted_Connection=yes;'
+    )
+
+    cursor = conn.cursor()
+
+    cursor.execute("""
+        SELECT od.order_detail_id,
+            product_name,
+            product_image,
+            discount_price,
+            qty,
+            subtotal
+        FROM OrderDetail od
+        JOIN Orders o ON od.order_id = o.order_id
+        WHERE od.order_id = ?
+        AND o.customer_id = ?
+    """, (order_id, customer_id))
+
+    rows = cursor.fetchall()
+
+    result = []
+
+    for row in rows:
+
+        result.append({
+            "order_detail_id": row[0],
+            "product_name": row[1],
+            "product_image": row[2],
+            "discount_price": float(row[3] or 0),
+            "qty": row[4],
+            "subtotal": float(row[5] or 0)
+        })
+
+    conn.close()
+
+    return jsonify(result)
+
+@app.route("/api/review", methods=["POST"])
+def review():
+
+    data = request.get_json()
+    customer_id = session.get("customer_id")
+
+    star = data.get("star")
+    content = data.get("content")
+    order_detail_id = data.get("order_detail_id")
+
+    if not customer_id:
+        return jsonify({"error": "chưa đăng nhập"}), 401
+
+    conn = pyodbc.connect(
+        'DRIVER={SQL Server};'
+        f'SERVER={server};'
+        f'DATABASE={database};'
+        'Trusted_Connection=yes;'
+    )
+
+    cursor = conn.cursor()
+
+    cursor.execute("""
+        INSERT INTO Review (order_detail_id, star, content)
+        VALUES (?, ?, ?)
+        """, (order_detail_id, star, content))
+    conn.commit()
+    conn.close()
+
+    return jsonify({"message": "OK"})
+
 
 if __name__ == "__main__":
     app.run(host='localhost', port=5000, debug=True, use_reloader=False, threaded=True) 

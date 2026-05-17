@@ -13,7 +13,9 @@ import { environment } from '../../../environments/environment';
 })
 export class Productdetail implements OnInit {
 
-  product: any;
+  product: any; 
+
+  environment = environment
 
   constructor(
     private route: ActivatedRoute,
