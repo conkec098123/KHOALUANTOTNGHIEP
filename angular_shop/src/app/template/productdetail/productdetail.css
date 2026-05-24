@@ -1,0 +1,23 @@
+.thumbnail-img{
+  cursor: pointer;
+  transition: 0.2s;
+}
+
+.thumbnail-img:hover{
+  transform: scale(1.05);
+  border: 2px solid black;
+}
+.main-image-container{
+  height: 500px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  background: white;
+}
+
+.main-image{
+  max-width: 100%;
+  max-height: 100%;
+  object-fit: contain;
+}

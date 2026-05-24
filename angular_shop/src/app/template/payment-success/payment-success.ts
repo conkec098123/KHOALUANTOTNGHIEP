@@ -19,14 +19,9 @@ export class PaymentSuccess {
     private cartService: CartService) { }
 
   ngOnInit() {
-    const orderId = this.route.snapshot.params['id'];
 
-    this.http.post(`${environment.apiUrl}/api/payment-success`,
-      { order_id: orderId },
-      { withCredentials: true }
-    ).subscribe(() => {
-      console.log("Thanh toán thành công");
-    });
+    console.log("Thanh toán thành công");
+
   }
   gotohome() {
     this.http.get<any>(`${environment.apiUrl}/api/current-user`,
@@ -40,5 +35,5 @@ export class PaymentSuccess {
     )
   };
 
-  
+
 }

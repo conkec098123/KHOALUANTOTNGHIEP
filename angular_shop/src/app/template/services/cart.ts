@@ -10,7 +10,9 @@ export class CartService {
 
   constructor(private http: HttpClient) { }
 
-  isLoggedIn = false;
+  get isLoggedIn() {
+    return this.user() !== null;
+  }
 
   cart = signal<any[]>(this.loadCart());
 
@@ -45,12 +47,14 @@ export class CartService {
         const existing = cart.find(i => i.product_id === item.product_id);
 
         if (existing) {
-          existing.qty += 1;
-        } else {
-          cart.push(item);
+          return cart.map(i =>
+            i.product_id === item.product_id
+              ? { ...i, qty: i.qty + 1 }   // 🔥 tạo object mới
+              : i
+          );
         }
 
-        return [...cart];
+        return [...cart, item];
       });
 
       this.saveCart();
@@ -79,42 +83,42 @@ export class CartService {
 
   decrease(item: any) {
 
-  item.qty -= 1;
+    item.qty -= 1;
 
-  if (item.qty <= 0) {
-    this.remove(item.product_id);
-  } else {
-    this.cart.set([...this.cart()]);
+    if (item.qty <= 0) {
+      this.remove(item.product_id);
+    } else {
+      this.cart.set([...this.cart()]);
+    }
+
+    this.saveCart();
   }
-
-  this.saveCart();
-}
 
   remove(product_id: number) {
 
-  if (this.isLoggedIn) {
+    if (this.isLoggedIn) {
 
-    this.http.post(
-      `${environment.apiUrl}/api/cart/remove`,
-      { product_id },
-      { withCredentials: true }
-    ).subscribe(() => {
+      this.http.post(
+        `${environment.apiUrl}/api/cart/remove`,
+        { product_id },
+        { withCredentials: true }
+      ).subscribe(() => {
+
+        this.cart.update(items =>
+          items.filter(i => i.product_id !== product_id)
+        );
+
+      });
+
+    } else {
 
       this.cart.update(items =>
         items.filter(i => i.product_id !== product_id)
       );
 
-    });
-
-  } else {
-
-    this.cart.update(items =>
-      items.filter(i => i.product_id !== product_id)
-    );
-
-    this.saveCart();
+      this.saveCart();
+    }
   }
-}
 
   getTotal() {
     return this.cart().reduce((sum, item) => {

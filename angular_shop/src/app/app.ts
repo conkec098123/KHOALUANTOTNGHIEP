@@ -22,24 +22,16 @@ type FilterType = {
   styleUrl: './app.css'
 })
 
-export class App implements OnInit {
+export class App implements OnInit{
   title = signal('Laptop Store');
 
   products = signal<any[]>([]);
 
-  full_name = signal<string>('');
-
   cart = signal<string[]>([]);
-
-  avatar = signal<string>('');
 
   keyword: string = '';
 
   environment = environment
-
-  get user() {
-    return this.cartService.user;
-  }
 
   filters: FilterType = {
     ram: [],
@@ -52,38 +44,19 @@ export class App implements OnInit {
   constructor(private http: HttpClient,
     public cartService: CartService,
     private router: Router,
-    private searchService: SearchService) {
-    effect(() => {
-      const user = this.cartService.user();
+    private searchService: SearchService) {}
 
-      if (user) {
-        this.full_name.set(user.name);
-      } else {
-        this.full_name.set('');
+    ngOnInit() {
+  this.cartService.checkLogin()
+    .subscribe({
+      next: (user) => {
+        this.cartService.user.set(user);
+      },
+      error: () => {
+        this.cartService.user.set(null);
       }
     });
-  }
-
-  ngOnInit() {
-
-  if (this.cartService.isLoggedIn) {
-
-    this.http.get<any>(
-      `${environment.apiUrl}/api/profile`,
-      { withCredentials: true }
-
-    ).subscribe(res => {
-
-      this.full_name.set(res.full_name);
-      this.avatar.set(res.avatar);
-
-    });
-
-  }
-
 }
-
-
 
   isOpen = false;
 

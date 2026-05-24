@@ -96,19 +96,26 @@ def current_user():
                 })
 
         if "customer_id" in session:
-            cursor.execute("SELECT full_name FROM Customer WHERE customer_id = ?", (session["customer_id"],))
+            cursor.execute("""
+            SELECT full_name, email, phone_number, dob, gender, avatar
+            FROM Customer
+            WHERE customer_id = ?
+            """, (session["customer_id"],))
+
             customer = cursor.fetchone()
 
             if customer:
                 return jsonify({
-                    "name": customer[0],
+                    "full_name": customer[0],
+                    "email": customer[1],
+                    "phone_number": customer[2],
+                    "dob": customer[3],
+                    "gender": customer[4],
+                    "avatar": customer[5],
                     "role": "customer"
                 })
 
-        return jsonify({
-            "name": "Guest",
-            "role": "guest"
-        })
+        return jsonify(None)
     except Exception as e:
         print(traceback.format_exc())
 
@@ -170,7 +177,7 @@ def login():
 
     # 🔥 1. CHECK ADMIN
     cursor.execute("""
-        SELECT * FROM [User]
+        SELECT username, password FROM [User]
         WHERE username = ? AND password = ?
     """, (username, password))
 
@@ -187,9 +194,9 @@ def login():
             "role": "admin"
         })
 
-    # 🔥 2. CHECK CUSTOMER
     cursor.execute("""
-        SELECT * FROM Customer
+        SELECT customer_id, full_name, avatar
+        FROM Customer
         WHERE full_name = ? AND password = ?
     """, (username, password))
 
@@ -444,27 +451,6 @@ def add_product():
 
     return jsonify({"message": "Thêm sản phẩm thành công"})
 
-@app.route("/api/products/<int:id>")
-def get_product(id):
-
-    conn = pyodbc.connect(
-    'DRIVER={SQL Server};'
-    f'SERVER={server};'
-    f'DATABASE={database};'
-    'Trusted_Connection=yes;')
-    cursor = conn.cursor()
-
-    cursor.execute("SELECT product_id, name, price, discount_price, qty FROM Product WHERE product_id = ?", (id,))
-    p = cursor.fetchone()
-
-    return jsonify({
-        "product_id": p[0],
-        "name": p[1],
-        "price": float(p[2] or 0),
-        "discount_price": float(p[2] or 0),
-        "qty": int(p[4] or 0)
-    })
-
 @app.route("/api/products/<int:id>", methods=["PUT"])
 def update_product(id):
 
@@ -490,55 +476,6 @@ def update_product(id):
     conn.commit()
 
     return jsonify({"message": "Cập nhật thành công"})
-
-@app.route('/api/product/<int:id>', methods=['GET'])
-def get_product_detail(id):
-    conn = pyodbc.connect(
-    'DRIVER={SQL Server};'
-    f'SERVER={server};'
-    f'DATABASE={database};'
-    'Trusted_Connection=yes;')
-    cursor = conn.cursor()
-    query = """
-    SELECT 
-        p.product_id,
-        p.name,
-        p.price,
-        p.discount_price,
-        p.image,
-
-        MAX(CASE WHEN a.name = 'CPU' THEN pa.value END) AS cpu,
-        MAX(CASE WHEN a.name = 'RAM' THEN pa.value END) AS ram,
-        MAX(CASE WHEN a.name = 'SSD' THEN pa.value END) AS ssd
-
-    FROM Product p
-    LEFT JOIN ProductAttribute pa ON p.product_id = pa.product_id
-    LEFT JOIN Attribute a ON pa.attribute_id = a.attribute_id
-
-    WHERE p.product_id = ?
-
-    GROUP BY 
-        p.product_id, p.name, p.price, p.discount_price, p.image
-    """
-
-    cursor.execute(query, id)
-    row = cursor.fetchone()
-
-    if not row:
-        return jsonify({"message": "Product not found"}), 404
-
-    product = {
-        "id": row.product_id,
-        "name": row.name,
-        "price": float(row.price) if row.price else 0,
-        "discount_price": float(row.discount_price) if row.discount_price else 0,
-        "image": row.image,
-        "cpu": row.cpu,
-        "ram": row.ram,
-        "ssd": row.ssd
-    }
-
-    return jsonify(product)
 
 @app.route("/api/products/<int:id>", methods=["DELETE"])
 def delete_product(id):
@@ -960,43 +897,6 @@ def send_email(to_email, reset_link):
         server.login(sender, app_password)
         server.send_message(msg)
 
-@app.route("/api/profile", methods=["GET"])
-def profile():
-
-    customer_id = session.get("customer_id")
-
-    if not customer_id:
-        return jsonify({"error": "Chưa đăng nhập"}), 401
-
-    conn = pyodbc.connect(
-        'DRIVER={SQL Server};'
-        f'SERVER={server};'
-        f'DATABASE={database};'
-        'Trusted_Connection=yes;'
-    )
-    cursor = conn.cursor()
-
-    cursor.execute("""
-        SELECT full_name, email, phone_number,
-               dob, gender, avatar
-        FROM Customer
-        WHERE customer_id = ?
-    """, (customer_id,))
-
-    user = cursor.fetchone()
-
-    if not user:
-        return jsonify({"error": "Không tìm thấy user"}), 404
-
-    return jsonify({
-        "full_name": user.full_name,
-        "email": user.email,
-        "phone_number": user.phone_number,
-        "dob": user.dob,
-        "gender": user.gender,
-        "avatar": user.avatar
-    })
-
 @app.route("/api/customer/profile", methods=["PUT"])
 def info_customer():
     data = request.get_json()
@@ -1298,6 +1198,164 @@ def review():
 
     return jsonify({"message": "OK"})
 
+@app.route('/api/product/<int:id>', methods=['GET'])
+def get_product_detail(id):
+
+    conn = pyodbc.connect(
+        'DRIVER={SQL Server};'
+        f'SERVER={server};'
+        f'DATABASE={database};'
+        'Trusted_Connection=yes;'
+    )
+
+    cursor = conn.cursor()
+
+    # product chính
+    cursor.execute("""
+        SELECT
+            product_id,
+            name,
+            price,
+            discount_price,
+            image
+        FROM Product
+        WHERE product_id = ?
+    """, (id,))
+
+    row = cursor.fetchone()
+
+    if not row:
+        return jsonify({"message": "Product not found"}), 404
+
+    # attributes
+    cursor.execute("""
+        SELECT
+            a.name,
+            pa.value
+        FROM ProductAttribute pa
+        JOIN Attribute a
+            ON pa.attribute_id = a.attribute_id
+        WHERE pa.product_id = ?
+    """, (id,))
+
+    attrs = cursor.fetchall()
+
+    # ảnh phụ
+    cursor.execute("""
+        SELECT image
+        FROM ProductImage
+        WHERE product_id = ?
+        ORDER BY display_order
+    """, (id,))
+
+    images = cursor.fetchall()
+
+    conn.close()
+
+    product = {
+        "product_id": row.product_id,
+        "name": row.name,
+        "price": float(row.price or 0),
+        "discount_price": float(row.discount_price or 0),
+        "image": row.image,
+
+        "images": [img.image for img in images],
+
+        "attributes": [
+            {
+                "name": attr.name,
+                "value": attr.value
+            }
+            for attr in attrs
+        ]
+    }
+
+    return jsonify(product)
+
+@app.route("/api/related-products/<int:id>")
+def related_products(id):
+
+    conn = pyodbc.connect(
+        'DRIVER={SQL Server};'
+        f'SERVER={server};'
+        f'DATABASE={database};'
+        'Trusted_Connection=yes;'
+    )
+
+    cursor = conn.cursor()
+
+    cursor.execute("""
+
+        SELECT
+            p.product_id,
+            p.name,
+            p.price,
+            p.discount_price,
+            p.image
+
+        FROM ProductRelated pr
+
+        JOIN Product p
+        ON pr.related_product_id = p.product_id
+
+        WHERE pr.product_id = ?
+
+    """, (id,))
+
+    rows = cursor.fetchall()
+    
+    print(rows)
+
+    conn.close()
+
+    products = []
+
+    for p in rows:
+
+        products.append({
+
+            "product_id": p.product_id,
+            "name": p.name,
+            "price": float(p.price or 0),
+            "discount_price": float(p.discount_price or 0),
+            "image": p.image
+
+        })
+
+    return jsonify(products)
+
+@app.route("/api/reviews/<int:product_id>")
+def get_reviews(product_id):
+
+    conn = pyodbc.connect(
+        'DRIVER={SQL Server};'
+        f'SERVER={server};'
+        f'DATABASE={database};'
+        'Trusted_Connection=yes;'
+    )
+    cursor = conn.cursor()
+
+    cursor.execute("""
+        SELECT r.star, r.content, r.created_at, c.full_name 
+        FROM Review r 
+        JOIN OrderDetail od ON r.order_detail_id = od.order_detail_id 
+        JOIN Orders o ON od.order_id = o.order_id 
+        JOIN Customer c ON o.customer_id = c.customer_id 
+        WHERE od.product_id = ? 
+        ORDER BY r.created_at DESC
+    """, product_id)
+
+    rows = cursor.fetchall()
+
+    return jsonify([
+        {
+            "star": r.star,
+            "content": r.content,
+            "created_at": str(r.created_at),
+            "username": r.username
+        }
+        for r in rows
+    ])
 
 if __name__ == "__main__":
     app.run(host='localhost', port=5000, debug=True, use_reloader=False, threaded=True) 

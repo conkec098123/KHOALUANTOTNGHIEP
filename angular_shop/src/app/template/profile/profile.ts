@@ -24,7 +24,7 @@ export class Profile {
   ngOnInit() {
 
     this.http.get<any>(
-      `${environment.apiUrl}/api/profile`,
+      `${environment.apiUrl}/api/current-user`,
       { withCredentials: true }
 
     ).subscribe({

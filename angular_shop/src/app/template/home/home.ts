@@ -23,8 +23,6 @@ export class Home implements OnInit {
 
   products = signal<any[]>([]);
 
-  full_name = signal<string>('');
-
   cart = signal<string[]>([]);
 
   showFilter = signal(false);
@@ -59,7 +57,7 @@ export class Home implements OnInit {
 
           console.log("SUCCESS:", res);
 
-          if (this.cartService.isLoggedIn) {
+          if (this.cartService.user()) {
 
             this.cartService.loadCartFromDB()
               .subscribe(data => {
@@ -126,11 +124,5 @@ export class Home implements OnInit {
 
   ngOnInit() {
     this.loadProducts();
-
-    this.http.get<any>(`${environment.apiUrl}/api/current-user`, { withCredentials: true })
-      .subscribe(data => {
-        console.log(data);
-        this.full_name.set(data.name);
-      });
   }
 }

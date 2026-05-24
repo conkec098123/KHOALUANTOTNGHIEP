@@ -78,9 +78,8 @@ export class Login {
   }
   afterLogin(loginRes: any) {
 
-  this.cartService.isLoggedIn = true;
+  this.cartService.user()
 
-  // 1. load user trước (quan trọng hơn cart)
   this.http.get<any>(
     `${environment.apiUrl}/api/current-user`,
     { withCredentials: true }
