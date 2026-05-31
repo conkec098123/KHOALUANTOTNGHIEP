@@ -1,0 +1,142 @@
+<div class="container">
+<h3>Laptop Gaming</h3>
+
+<div class="row">
+
+  <div class="col-md-3 mb-3"
+       *ngFor="let p of gamingProducts()">
+
+    <div class="card h-100">
+
+      <img [src]="p.image"
+           class="card-img-top">
+
+      <div class="card-body">
+
+        <h6>{{ p.name }}</h6>
+
+        <p>{{ p.price | number }}đ</p>
+
+        <p>{{ p.discount_price | number }}đ</p>
+
+      </div>
+
+    </div>
+
+  </div>
+
+</div>
+
+<h3>Laptop Văn Phòng</h3>
+
+<div class="row">
+
+  <div class="col-md-3 mb-3"
+       *ngFor="let p of officeProducts()">
+
+    <div class="card h-100">
+
+      <img [src]="p.image"
+           class="card-img-top">
+
+      <div class="card-body">
+
+        <h6>{{ p.name }}</h6>
+
+        <p>{{ p.price | number }}đ</p>
+
+        <p>{{ p.discount_price | number }}đ</p>
+
+      </div>
+
+    </div>
+
+  </div>
+
+</div>
+
+<h3>Laptop Sinh Viên</h3>
+
+<div class="row">
+
+  <div class="col-md-3 mb-3"
+       *ngFor="let p of studentProducts()">
+
+    <div class="card h-100">
+
+      <img [src]="p.image"
+           class="card-img-top">
+
+      <div class="card-body">
+
+        <h6>{{ p.name }}</h6>
+
+        <p>{{ p.price | number }}đ</p>
+
+        <p>{{ p.discount_price | number }}đ</p>
+
+      </div>
+
+    </div>
+
+  </div>
+
+</div>
+
+<h3>Chuột</h3>
+
+<div class="row">
+
+  <div class="col-md-3 mb-3"
+       *ngFor="let p of mouseProducts()">
+
+    <div class="card h-100">
+
+      <img [src]="p.image"
+           class="card-img-top">
+
+      <div class="card-body">
+
+        <h6>{{ p.name }}</h6>
+
+        <p>{{ p.price | number }}đ</p>
+
+        <p>{{ p.discount_price | number }}đ</p>
+
+      </div>
+
+    </div>
+
+  </div>
+
+</div>
+
+<h3>Bàn phím</h3>
+
+<div class="row">
+
+  <div class="col-md-3 mb-3"
+       *ngFor="let p of keyboardProducts()">
+
+    <div class="card h-100">
+
+      <img [src]="p.image"
+           class="card-img-top">
+
+      <div class="card-body">
+
+        <h6>{{ p.name }}</h6>
+
+        <p>{{ p.price | number }}đ</p>
+
+        <p>{{ p.discount_price | number }}đ</p>
+
+      </div>
+
+    </div>
+
+  </div>
+
+</div>
+
+</div>

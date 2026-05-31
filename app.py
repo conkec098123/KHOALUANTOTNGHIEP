@@ -511,7 +511,7 @@ def filter_products():
     query = """
     SELECT DISTINCT p.*
     FROM Product p
-    WHERE 1=1
+    WHERE p.menu_id IN (2,3,4)
     """
     params = []
 
@@ -1336,7 +1336,7 @@ def get_reviews(product_id):
     cursor = conn.cursor()
 
     cursor.execute("""
-        SELECT r.star, r.content, r.created_at, c.full_name 
+        SELECT r.star, r.content, r.created_at, c.full_name AS username
         FROM Review r 
         JOIN OrderDetail od ON r.order_detail_id = od.order_detail_id 
         JOIN Orders o ON od.order_id = o.order_id 
@@ -1356,6 +1356,52 @@ def get_reviews(product_id):
         }
         for r in rows
     ])
+
+@app.route("/api/products/menu/<int:menu_id>")
+def get_products_by_menu(menu_id):
+
+    conn = pyodbc.connect(
+        'DRIVER={SQL Server};'
+        f'SERVER={server};'
+        f'DATABASE={database};'
+        'Trusted_Connection=yes;'
+    )
+
+    cursor = conn.cursor()
+
+    cursor.execute("""
+        SELECT
+            product_id,
+            menu_id,
+            name,
+            alias,
+            image,
+            status,
+            price,
+            discount_price
+        FROM Product
+        WHERE menu_id = ?
+    """, (menu_id,))
+
+    rows = cursor.fetchall()
+
+    products = []
+
+    for r in rows:
+        products.append({
+            "product_id": r.product_id,
+            "menu_id": r.menu_id,
+            "name": r.name,
+            "alias": r.alias,
+            "image": r.image,
+            "status": r.status,
+            "price": float(r.price or 0),
+            "discount_price": float(r.discount_price or 0)
+        })
+
+    conn.close()
+
+    return jsonify(products)
 
 if __name__ == "__main__":
     app.run(host='localhost', port=5000, debug=True, use_reloader=False, threaded=True) 

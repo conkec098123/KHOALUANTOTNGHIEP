@@ -10,7 +10,6 @@ import { CartService } from '../services/cart';
   imports: [RouterModule, CommonModule],
   templateUrl: './productdetail.html',
   styleUrl: './productdetail.css',
-  standalone: true,
 })
 export class Productdetail implements OnInit {
 
@@ -89,6 +88,7 @@ export class Productdetail implements OnInit {
       `${environment.apiUrl}/api/reviews/${id}`
     ).subscribe(res => {
       this.reviews = res;
+      this.cdr.detectChanges();
     });
   }
 

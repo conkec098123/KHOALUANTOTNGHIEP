@@ -16,12 +16,17 @@ import { Address } from './template/address/address';
 import { OrderManagement } from './template/order-management/order-management';
 import { OrderDetail } from './template/order-detail/order-detail';
 import { Review } from './template/review/review';
+import { MainHome } from './template/main-home/main-home';
 
 export const routes: Routes = [
     {
         path:'',
-        component:Home,
+        component:MainHome,
         pathMatch:'full'
+    },
+    {
+        path:"home",
+        component: Home
     },
     {
         path:"login",
