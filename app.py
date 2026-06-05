@@ -118,6 +118,7 @@ def current_user():
         return jsonify(None)
     except Exception as e:
         print(traceback.format_exc())
+        return jsonify({"error": str(e)}), 500
 
 @app.route("/api/register", methods=["POST"])
 def register():
@@ -177,7 +178,8 @@ def login():
 
     # 🔥 1. CHECK ADMIN
     cursor.execute("""
-        SELECT username, password FROM [User]
+        SELECT user_id, username
+        FROM [User]
         WHERE username = ? AND password = ?
     """, (username, password))
 
@@ -428,7 +430,7 @@ def remove_cart_item():
 
     return jsonify({"message": "removed"})
 
-@app.route("/add_product", methods=["POST"])
+@app.route("/api/add_product", methods=["POST"])
 def add_product():
 
     conn = pyodbc.connect(
@@ -438,17 +440,32 @@ def add_product():
     'Trusted_Connection=yes;')
     cursor = conn.cursor()
 
-    data = request.json  
-    name = data.get("name")
-    price = data.get("price")
-    qty = data.get("qty")
+    data = request.json
 
-    cursor.execute("""
-        INSERT INTO Product (name, price, qty)
-        VALUES (?, ?, ?)
-    """, (name, price, qty))
-    conn.commit()
+    product = data.get("product")
+    attributes = data.get("attributes", [])
+    related = data.get("related", [])
 
+    print(product)
+    print(attributes)
+    print(related)
+
+    name = product.get("name")
+    price = product.get("price")
+    discount_price = product.get("discount_price")
+    qty = product.get("qty")
+    menu_id = int(product.get("menu_id"))
+    status = product.get("status")
+    try:
+        cursor.execute("""
+            INSERT INTO Product (name, price, discount_price, qty, menu_id, status)
+            VALUES (?, ?, ?, ?, ?, ?)
+        """, (name, price, discount_price, qty, menu_id, status))
+        conn.commit()
+        conn.close()
+    except Exception as e:
+        conn.rollback()
+        print(e)
     return jsonify({"message": "Thêm sản phẩm thành công"})
 
 @app.route("/api/products/<int:id>", methods=["PUT"])
@@ -1402,6 +1419,85 @@ def get_products_by_menu(menu_id):
     conn.close()
 
     return jsonify(products)
+
+@app.route("/api/menus")
+def get_menus():
+    conn = pyodbc.connect(
+        'DRIVER={SQL Server};'
+        f'SERVER={server};'
+        f'DATABASE={database};'
+        'Trusted_Connection=yes;'
+    )
+    cursor = conn.cursor()
+
+    cursor.execute("SELECT menu_id, name FROM Menu")
+    rows = cursor.fetchall()
+
+    return jsonify([
+        {"menu_id": r[0], "name": r[1]}
+        for r in rows
+    ])
+
+@app.route("/api/menu/<int:menu_id>/attributes")
+def get_menu_attributes(menu_id):
+    conn = pyodbc.connect(
+        'DRIVER={SQL Server};'
+        f'SERVER={server};'
+        f'DATABASE={database};'
+        'Trusted_Connection=yes;'
+    )
+    cursor = conn.cursor()
+
+    cursor.execute("""
+        SELECT a.attribute_id, a.name
+        FROM Attribute a
+        JOIN MenuAttribute ma ON a.attribute_id = ma.attribute_id
+        WHERE ma.menu_id = ?
+    """, (menu_id,))
+
+    rows = cursor.fetchall()
+
+    return jsonify([
+        {"id": r[0], "name": r[1]}
+        for r in rows
+    ])
+
+@app.route("/upload-product-image", methods=["POST"])
+def upload_product_image():
+
+    file = request.files["image"]
+
+    customer_id = session.get("customer_id")
+
+    if not file:
+        return jsonify({"error": "Không có file"}), 400
+
+    filename = f"{uuid.uuid4()}_{secure_filename(file.filename)}"
+
+    filepath = os.path.join(PRODUCT_IMAGE_FOLDER, filename)
+
+    file.save(filepath)
+
+    image = f"images/{filename}"
+
+    conn = pyodbc.connect(
+        'DRIVER={SQL Server};'
+        f'SERVER={server};'
+        f'DATABASE={database};'
+        'Trusted_Connection=yes;'
+    )
+    cursor = conn.cursor()
+
+    cursor.execute("""INSERT INTO Product
+                   VALUES image = ?
+                   WHERE user_id = ?""", (image, customer_id),)
+    
+    conn.commit()
+    conn.close()
+
+    return jsonify({
+        "avatar_url": f"/static/images/{filename}"
+    })
 
 if __name__ == "__main__":
     app.run(host='localhost', port=5000, debug=True, use_reloader=False, threaded=True) 

@@ -1,20 +1,42 @@
-<a class="nav-link" [routerLink]="['/add-product']">add-product</a>
-@for (product of products(); track product.id) {
-   <div class="card m-2 p-2" style="width: 200px; display:inline-block">
-    
-    <img [src]="product.image" width="100">
-    <p>{{ product.image }}</p>
+<table class="table table-bordered">
+  <thead>
+    <tr>
+      <th>Ảnh</th>
+      <th>Tên</th>
+      <th>Giá</th>
+      <th>Giảm giá</th>
+      <th>Tồn kho</th>
+      <th>Hành động</th>
+    </tr>
+  </thead>
 
-    <div class="card-body">
-      <h5>{{ product.name }}</h5>
-      <p class="strikeout">Giá: {{ product.price }}</p>
-      <p>Giá: {{ product.discount_price }}</p>
-      <p>Tồn kho: {{ product.qty }}</p>
+  <tbody>
+    @for (product of products(); track product.product_id) {
+      <tr>
+        <td>
+          <img [src]="product.image" width="60">
+        </td>
 
-      <button (click)="goToEdit(product.id)">edit-product</button>
-      <button (click)="deleteProduct(product.id)">Xóa</button>
-    </div>
+        <td>{{ product.name }}</td>
 
-  </div>
-}
+        <td>{{ product.price | number }}</td>
 
+        <td>{{ product.discount_price | number }}</td>
+
+        <td>{{ product.qty }}</td>
+
+        <td>
+          <button class="btn btn-sm btn-warning"
+                  (click)="goToEdit(product.product_id)">
+            Edit
+          </button>
+
+          <button class="btn btn-sm btn-danger"
+                  (click)="deleteProduct(product.product_id)">
+            Xóa
+          </button>
+        </td>
+      </tr>
+    }
+  </tbody>
+</table>

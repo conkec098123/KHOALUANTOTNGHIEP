@@ -14,15 +14,15 @@ import { CartService } from '../services/cart';
 export class Productdetail implements OnInit {
 
 
-  product: any = {};
+  product = signal<any>(null);
 
   cart = signal<string[]>([]);
 
-  relatedProducts: any[] = [];
+  relatedProducts = signal<any[]>([]);
 
   selectedImage = '';
 
-  reviews: any[] = [];
+  reviews = signal<any[]>([]);
 
 
 
@@ -49,9 +49,7 @@ export class Productdetail implements OnInit {
         `${environment.apiUrl}/api/product/${id}`
       ).subscribe(res => {
 
-        console.log("RES:", res); this.product = res; console.log("PRODUCT:", this.product);
-
-        this.cdr.detectChanges();
+        console.log("RES:", res); this.product.set(res); console.log("PRODUCT:", this.product);
 
         this.selectedImage = res.image;
 
@@ -63,11 +61,9 @@ export class Productdetail implements OnInit {
         `${environment.apiUrl}/api/related-products/${id}`
       ).subscribe(res => {
 
-        this.relatedProducts = res;
+        this.relatedProducts.set(res);
 
         console.log("RELATED:", res);
-
-        this.cdr.detectChanges();
 
       });
 
@@ -87,8 +83,7 @@ export class Productdetail implements OnInit {
     this.http.get<any[]>(
       `${environment.apiUrl}/api/reviews/${id}`
     ).subscribe(res => {
-      this.reviews = res;
-      this.cdr.detectChanges();
+      this.reviews.set(res);
     });
   }
 

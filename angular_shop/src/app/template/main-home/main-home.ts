@@ -2,6 +2,8 @@ import { HttpClient } from '@angular/common/http';
 import { ChangeDetectorRef, Component, signal } from '@angular/core';
 import { environment } from '../../../environments/environment';
 import { CommonModule } from '@angular/common';
+import { CartService } from '../services/cart';
+import { Router } from '@angular/router';
 
 @Component({
   selector: 'app-main-home',
@@ -17,7 +19,7 @@ export class MainHome {
   keyboardProducts = signal<any[]>([]);
   mouseProducts = signal<any[]>([]);
 
-  constructor(private http: HttpClient, private cdr: ChangeDetectorRef) { }
+  constructor(private http: HttpClient, private cdr: ChangeDetectorRef, private cartService: CartService, private router: Router) { }
 
   ngOnInit(): void {
 
@@ -62,6 +64,45 @@ export class MainHome {
       console.log("5 SECONDS LATER:", this.gamingProducts);
     }, 5000);
 
+  }
+
+  addToCart(product: any) {
+
+    this.cartService.addToCart(product)
+      .subscribe({
+
+        next: (res: any) => {
+
+          console.log("SUCCESS:", res);
+
+          if (this.cartService.user()) {
+
+            this.cartService.loadCartFromDB()
+              .subscribe(data => {
+
+                this.cartService.cart.set(data);
+
+              });
+
+          }
+
+        },
+
+        error: (err) => {
+          console.log("ERROR:", err);
+        }
+
+      });
+
+  }
+
+  gotohome(){
+    this.router.navigate(['/home'])
+  }
+
+  viewDetail(product: any) {
+    this.router.navigate(['/product', product.product_id]);
+    console.log('CLICK OK', product);
   }
 
   test() {

@@ -2,10 +2,11 @@ import { HttpClient, HttpClientModule } from '@angular/common/http';
 import { Component, OnInit, signal } from '@angular/core';
 import { RouterLink, RouterOutlet, Router } from '@angular/router';
 import { environment } from '../../../environments/environment';
+import { DecimalPipe } from '@angular/common';
 
 @Component({
   selector: 'app-admin',
-  imports: [HttpClientModule, RouterLink],
+  imports: [HttpClientModule, RouterLink, DecimalPipe],
   templateUrl: './admin.html',
   styleUrl: './admin.css',
 })

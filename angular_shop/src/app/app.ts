@@ -23,7 +23,10 @@ type FilterType = {
 })
 
 export class App implements OnInit{
+
   title = signal('Laptop Store');
+
+  
 
   products = signal<any[]>([]);
 
@@ -46,17 +49,17 @@ export class App implements OnInit{
     private router: Router,
     private searchService: SearchService) {}
 
-    ngOnInit() {
-  this.cartService.checkLogin()
-    .subscribe({
-      next: (user) => {
-        this.cartService.user.set(user);
-      },
-      error: () => {
-        this.cartService.user.set(null);
-      }
-    });
-}
+      ngOnInit() {
+    this.cartService.checkLogin()
+      .subscribe({
+        next: (user) => {
+          this.cartService.user.set(user);
+        },
+        error: () => {
+          this.cartService.user.set(null);
+        }
+      });
+  }
 
   isOpen = false;
 
@@ -88,6 +91,11 @@ export class App implements OnInit{
 
   gotoordermanagement() {
     this.router.navigate(['/order-management'])
+    this.isOpen = false;
+  }
+
+  gotoaddproduct() {
+    this.router.navigate(['/add-product'])
     this.isOpen = false;
   }
 

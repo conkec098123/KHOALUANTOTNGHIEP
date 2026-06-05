@@ -33,14 +33,17 @@
             </button>
 
             <ul *ngIf="isOpen" class="dropdown-menu show">
-              <li>
+              <li *ngIf="cartService.user()?.role === 'customer'">
                 <a class="dropdown-item" (click)="gotoprofile()">Quản lý tài khoản</a>
               </li>
-              <li>
+              <li *ngIf="cartService.user()?.role === 'customer'">
                 <a class="dropdown-item" (click)="gotoordermanagement()">Quản lý đơn hàng</a>
               </li>
-              <li>
+              <li *ngIf="cartService.user()?.role === 'customer'">
                 <a class="dropdown-item" (click)="gotochangepassword()">Đổi mật khẩu</a>
+              </li>
+              <li *ngIf="cartService.user()?.role === 'admin'">
+                <a class="dropdown-item" (click)="gotoaddproduct()">Thêm sản phẩm</a>
               </li>
               <li>
                 <a class="dropdown-item" (click)="logout()">Đăng xuất</a>

@@ -1,18 +1,98 @@
-<div class="container mt-5">
-  <h2>Thêm sản phẩm mới</h2>
+<div class="container mt-4">
+  <h2>Thêm sản phẩm</h2>
+
   <form (ngSubmit)="submit()">
-    <div class="mb-3">
-      <label class="form-label">Tên sản phẩm</label>
-      <input type="text" class="form-control" [(ngModel)]="name" name="name" required>
+
+    <!-- ================= BASIC INFO ================= -->
+    <div class="card p-3 mb-3">
+      <h5>Thông tin cơ bản</h5>
+
+      <!-- Tên -->
+      <div class="mb-3">
+        <label>Tên sản phẩm</label>
+        <input class="form-control" [(ngModel)]="product.name" name="name">
+      </div>
+
+      <!-- Giá -->
+      <div class="mb-3">
+        <label>Giá</label>
+        <input type="number" class="form-control" [(ngModel)]="product.price" name="price">
+      </div>
+
+      <!-- Giảm giá -->
+      <div class="mb-3">
+        <label>Giá giảm</label>
+        <input type="number" class="form-control" [(ngModel)]="product.discount_price" name="discount_price">
+      </div>
+
+      <!-- Số lượng -->
+      <div class="mb-3">
+        <label>Số lượng</label>
+        <input type="number" class="form-control" [(ngModel)]="product.qty" name="qty">
+      </div>
+
+      <!-- Menu -->
+      <div class="mb-3">
+        <label>Loại sản phẩm</label>
+        <select class="form-control" [(ngModel)]="product.menu_id" name="menu_id" (change)="loadAttributes()">
+          <option *ngFor="let menu of menus()" [value]="menu.menu_id">
+            {{ menu.name }}
+          </option>
+        </select>
+      </div>
+
+      <!-- Status -->
+      <div class="mb-3">
+        <label>Trạng thái</label>
+        <select class="form-control" [(ngModel)]="product.status" name="status">
+          <option value="con hang">Còn hàng</option>
+          <option value="het hang">Hết hàng</option>
+          <option value="an">Ẩn</option>
+        </select>
+      </div>
     </div>
-    <div class="mb-3">
-      <label class="form-label">Giá</label>
-      <input type="number" class="form-control" [(ngModel)]="price" name="price" required>
+
+    <!-- ================= IMAGE ================= -->
+    <div class="card p-3 mb-3">
+      <h5>Hình ảnh</h5>
+
+      <input type="file" (change)="onFileChange($event)">
+
+      <div *ngIf="previewImage" class="mt-2">
+        <img [src]="previewImage" width="120" style="border-radius:8px">
+      </div>
     </div>
-    <div class="mb-3">
-      <label class="form-label">Số lượng</label>
-      <input type="number" class="form-control" [(ngModel)]="qty" name="qty" required>
+
+    <!-- ================= ATTRIBUTES ================= -->
+
+    <div class="card p-3 mb-3">
+      <h5>Thông số kỹ thuật</h5>
+
+      <div *ngFor="let attr of attributes()" class="mb-2">
+
+        <label>{{ attr.name }}</label>
+
+        <input class="form-control" [(ngModel)]="attr.value" [name]="'attr_' + attr.id">
+
+      </div>
     </div>
-    <button type="submit" class="btn btn-success">Thêm sản phẩm</button>
+
+    <!-- ================= RELATED ================= -->
+    <div class="card p-3 mb-3">
+      <h5>Sản phẩm liên quan</h5>
+
+      <div *ngFor="let p of allProducts()">
+        <label>
+          <input type="checkbox" [value]="p.product_id" (change)="toggleRelated(p.id)">
+          {{ p.name }}
+        </label>
+      </div>
+    </div>
+
+    <!-- SUBMIT -->
+    <button class="btn btn-success">
+      Lưu sản phẩm
+    </button>
+
   </form>
 </div>
