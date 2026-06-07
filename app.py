@@ -26,7 +26,7 @@ vnp_HashSecret = "81Y9ZNK7EFQ8V7SIM613H6A1QCS3ODJE"
 vnp_Url = "https://sandbox.vnpayment.vn/paymentv2/vpcpay.html"
 vnp_ReturnUrl = "http://localhost:4200/payment-success"
 
-server = 'localhost'
+server = r'.\SQLEXPRESS'
 database = 'KHOALUANTOTNGHIEP'
 
 conn = pyodbc.connect(
@@ -40,6 +40,8 @@ cursor = conn.cursor()
 print("Connected successfully!")
 
 UPLOAD_FOLDER = "static/uploads"
+
+PRODUCT_IMAGE_FOLDER = r"C:\Users\ph\Downloads\dangdung\KHOALUANTOTNGHIEP\angular_shop\public\images"
 
 @app.route("/api/products")
 def api_products():
@@ -451,6 +453,7 @@ def add_product():
     print(related)
 
     name = product.get("name")
+    image = product.get("image")
     price = product.get("price")
     discount_price = product.get("discount_price")
     qty = product.get("qty")
@@ -458,9 +461,61 @@ def add_product():
     status = product.get("status")
     try:
         cursor.execute("""
-            INSERT INTO Product (name, price, discount_price, qty, menu_id, status)
-            VALUES (?, ?, ?, ?, ?, ?)
-        """, (name, price, discount_price, qty, menu_id, status))
+            INSERT INTO Product (name, image, price, discount_price, qty, menu_id, status)
+            VALUES (?, ?, ?, ?, ?, ?, ?)
+        """, (name, image, price, discount_price, qty, menu_id, status))
+
+        cursor.execute("""
+        SELECT TOP 1 product_id
+        FROM Product
+        ORDER BY product_id DESC
+        """)
+
+        row = cursor.fetchone()
+
+        print(row)
+
+        product_id = row[0]
+
+        for attr in attributes:
+
+            value = attr.get("value")
+
+            if not value:
+                continue
+
+            attribute_id = attr.get("id")
+
+            cursor.execute("""
+                INSERT INTO ProductAttribute
+                (
+                    product_id,
+                    attribute_id,
+                    value
+                )
+                VALUES (?, ?, ?)
+            """,
+            (
+                product_id,
+                attribute_id,
+                value
+            ))
+
+        print("NEW PRODUCT:", product_id)
+        for related_id in related:
+
+            cursor.execute("""
+                INSERT INTO ProductRelated
+                (
+                    product_id,
+                    related_product_id
+                )
+                VALUES (?, ?)
+            """,
+            (
+                product_id,
+                related_id
+            ))
         conn.commit()
         conn.close()
     except Exception as e:
@@ -1465,38 +1520,23 @@ def get_menu_attributes(menu_id):
 @app.route("/upload-product-image", methods=["POST"])
 def upload_product_image():
 
-    file = request.files["image"]
-
-    customer_id = session.get("customer_id")
+    file = request.files.get("image")
 
     if not file:
         return jsonify({"error": "Không có file"}), 400
 
     filename = f"{uuid.uuid4()}_{secure_filename(file.filename)}"
 
+    print(PRODUCT_IMAGE_FOLDER)
+
     filepath = os.path.join(PRODUCT_IMAGE_FOLDER, filename)
 
     file.save(filepath)
 
-    image = f"images/{filename}"
-
-    conn = pyodbc.connect(
-        'DRIVER={SQL Server};'
-        f'SERVER={server};'
-        f'DATABASE={database};'
-        'Trusted_Connection=yes;'
-    )
-    cursor = conn.cursor()
-
-    cursor.execute("""INSERT INTO Product
-                   VALUES image = ?
-                   WHERE user_id = ?""", (image, customer_id),)
-    
-    conn.commit()
-    conn.close()
+    image_path = f"images/{filename}"
 
     return jsonify({
-        "avatar_url": f"/static/images/{filename}"
+        "image": image_path
     })
 
 if __name__ == "__main__":

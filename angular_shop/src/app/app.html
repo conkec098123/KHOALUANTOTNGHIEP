@@ -52,8 +52,11 @@
           </div>
 
         </div>
-        <li class="nav-item">
+        <li class="nav-item" *ngIf="cartService.user()?.role === 'customer'">
           <a class="nav-link active mt-2" routerLink="/">Home</a>
+        </li>
+        <li class="nav-item" *ngIf="cartService.user()?.role === 'admin'">
+          <a class="nav-link active mt-2" routerLink="/admin">Home</a>
         </li>
         <li class="nav-item">
           <a class="nav-link mt-2" routerLink="cart">cart</a>

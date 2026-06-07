@@ -64,10 +64,30 @@ export class AddProduct {
         next: res => {
           console.log(this.attributes());
           console.log(res);
+          this.router.navigate(['/admin'])
         },
         error: err => {
           console.error(err);
         }
+      });
+
+    const formData = new FormData();
+
+    formData.append(
+      'image',
+      this.selectedFile!
+    );
+
+    this.http.post<any>(
+      `${environment.apiUrl}/upload-product-image`,
+      formData
+    )
+      .subscribe(res => {
+
+        console.log(res);
+
+        this.product.image = res.image;
+
       });
   }
   onFileChange(event: any) {
