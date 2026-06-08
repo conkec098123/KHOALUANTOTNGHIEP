@@ -18,7 +18,7 @@ export class AddProduct {
     discount_price: 0,
     qty: 0,
     menu_id: null,
-    status: 'con hang'
+    is_active: true
   };
 
   selectedFile: File | null = null;

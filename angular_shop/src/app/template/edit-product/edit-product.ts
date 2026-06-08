@@ -1,7 +1,7 @@
 import { HttpClient } from '@angular/common/http';
 import { ChangeDetectorRef, Component, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
-import { Router } from '@angular/router';
+import { ActivatedRoute, Router } from '@angular/router';
 import { environment } from '../../../environments/environment';
 import { CommonModule } from '@angular/common';
 
@@ -18,7 +18,7 @@ export class EditProduct {
     discount_price: 0,
     qty: 0,
     menu_id: null,
-    status: 'con hang'
+    is_active: true
   };
 
   selectedFile: File | null = null;
@@ -35,61 +35,58 @@ export class EditProduct {
   price: number | null = null;
   qty: number | null = null;
 
-  constructor(private http: HttpClient, private router: Router, private cdr: ChangeDetectorRef) { }
+  constructor(private http: HttpClient, private router: Router, private route: ActivatedRoute) { }
 
   ngOnInit() {
+    const id = this.route.snapshot.paramMap.get('id');
+
+    this.http.get<any>(
+      `${environment.apiUrl}/api/edit-product/${id}`
+    )
+      .subscribe(res => {
+
+        console.log(res);
+
+        this.product = res.product;
+
+        this.previewImage = '/' + this.product.image;
+
+        console.log("AFTER ASSIGN:", this.product);
+
+        this.attributes.set(res.attributes);
+
+        this.related.set(res.related);
+
+      });
+    console.log(id);
     console.log('ngOnInit');
     this.loadMenus();
     this.loadProducts();
   }
 
   submit() {
-    console.log(this.product);
 
-    console.log(this.attributes());
-
-    console.log(this.related());
-
-    const data = {
-      product: this.product,
-      attributes: this.attributes(),
-      related: this.related(),
-    };
-    this.http.post(
-      `${environment.apiUrl}/api/add_product`,
-      data,
-      { withCredentials: true }
-    )
-      .subscribe({
-        next: res => {
-          console.log(this.attributes());
-          console.log(res);
-          this.router.navigate(['/admin'])
-        },
-        error: err => {
-          console.error(err);
-        }
-      });
+  if (this.selectedFile) {
 
     const formData = new FormData();
-
-    formData.append(
-      'image',
-      this.selectedFile!
-    );
+    formData.append('image', this.selectedFile);
 
     this.http.post<any>(
       `${environment.apiUrl}/upload-product-image`,
       formData
-    )
-      .subscribe(res => {
+    ).subscribe(res => {
 
-        console.log(res);
+      this.product.image = res.image;
 
-        this.product.image = res.image;
+      this.updateProduct(); 
+    });
 
-      });
+  } 
+  else {
+    this.updateProduct();
   }
+}
+
   onFileChange(event: any) {
     const file = event.target.files[0];
 
@@ -107,7 +104,7 @@ export class EditProduct {
   }
   toggleRelated(productId: number) {
 
-    console.log(productId);
+    // console.log(productId);
 
     const current = this.related();
 
@@ -128,14 +125,14 @@ export class EditProduct {
 
     }
 
-    console.log(this.related());
+    // console.log(this.related());
   }
 
   loadMenus() {
     this.http.get<any[]>(
       `${environment.apiUrl}/api/menus`
     ).subscribe(res => {
-      console.log('menus', res);
+      // console.log('menus', res);
       this.menus.set(
         res.filter(m => m.menu_id !== 1 && m.menu_id !== 5)
       );
@@ -146,13 +143,13 @@ export class EditProduct {
     this.http.get<any[]>(
       `${environment.apiUrl}/api/products`
     ).subscribe(res => {
-      console.log(res);
+      // console.log(res);
       this.allProducts.set(res);
     });
   }
 
   loadAttributes() {
-    console.log('menu id:', this.product.menu_id);
+    // console.log('menu id:', this.product.menu_id);
 
     if (!this.product.menu_id) return;
 
@@ -160,8 +157,23 @@ export class EditProduct {
       `${environment.apiUrl}/api/menu/${this.product.menu_id}/attributes`
     )
       .subscribe(res => {
-        console.log('attributes:', res);
+        // console.log('attributes:', res);
         this.attributes.set(res);
       });
+  }
+  updateProduct() {
+
+    const data = {
+      product: this.product,
+      attributes: this.attributes(),
+      related: this.related()
+    };
+
+    this.http.put(
+      `${environment.apiUrl}/api/update-edit-products/${this.product.product_id}`,
+      data
+    ).subscribe(() => {
+      this.router.navigate(['/admin']);
+    });
   }
 }

@@ -55,6 +55,9 @@
         <li class="nav-item" *ngIf="cartService.user()?.role === 'customer'">
           <a class="nav-link active mt-2" routerLink="/">Home</a>
         </li>
+        <li class="nav-item" *ngIf="!cartService.user()">
+          <a class="nav-link active mt-2" routerLink="/">Home</a>
+        </li>
         <li class="nav-item" *ngIf="cartService.user()?.role === 'admin'">
           <a class="nav-link active mt-2" routerLink="/admin">Home</a>
         </li>

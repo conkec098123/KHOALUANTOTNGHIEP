@@ -62,7 +62,7 @@ def api_products():
 
     for p in products:
         data.append({
-            "id": p[0],
+            "product_id": p[0],
             "name": p[1],
             "price": float(p[2]),
             "discount_price": p[3] if p[3] is not None else 0,
@@ -458,12 +458,12 @@ def add_product():
     discount_price = product.get("discount_price")
     qty = product.get("qty")
     menu_id = int(product.get("menu_id"))
-    status = product.get("status")
+    is_active = product["is_active"]
     try:
         cursor.execute("""
-            INSERT INTO Product (name, image, price, discount_price, qty, menu_id, status)
+            INSERT INTO Product (name, image, price, discount_price, qty, menu_id, is_active)
             VALUES (?, ?, ?, ?, ?, ?, ?)
-        """, (name, image, price, discount_price, qty, menu_id, status))
+        """, (name, image, price, discount_price, qty, menu_id, is_active))
 
         cursor.execute("""
         SELECT TOP 1 product_id
@@ -523,45 +523,45 @@ def add_product():
         print(e)
     return jsonify({"message": "Thêm sản phẩm thành công"})
 
-@app.route("/api/products/<int:id>", methods=["PUT"])
-def update_product(id):
+# @app.route("/api/products/<int:id>", methods=["PUT"])
+# def update_product(id):
 
-    conn = pyodbc.connect(
-    'DRIVER={SQL Server};'
-    f'SERVER={server};'
-    f'DATABASE={database};'
-    'Trusted_Connection=yes;')
-    cursor = conn.cursor()
-    data = request.get_json()
+#     conn = pyodbc.connect(
+#     'DRIVER={SQL Server};'
+#     f'SERVER={server};'
+#     f'DATABASE={database};'
+#     'Trusted_Connection=yes;')
+#     cursor = conn.cursor()
+#     data = request.get_json()
 
-    name = data.get("name")
-    price = float(data.get("price"))
-    discount_price = float(data.get("discount_price"))
-    qty = int(data.get("qty"))
+#     name = data.get("name")
+#     price = float(data.get("price"))
+#     discount_price = float(data.get("discount_price"))
+#     qty = int(data.get("qty"))
 
-    cursor.execute("""
-        UPDATE Product
-        SET name = ?, price = ?, discount_price = ?, qty = ?
-        WHERE product_id = ?
-    """, (name, price, discount_price, qty, id))
+#     cursor.execute("""
+#         UPDATE Product
+#         SET name = ?, price = ?, discount_price = ?, qty = ?
+#         WHERE product_id = ?
+#     """, (name, price, discount_price, qty, id))
 
-    conn.commit()
+#     conn.commit()
 
-    return jsonify({"message": "Cập nhật thành công"})
+#     return jsonify({"message": "Cập nhật thành công"})
 
-@app.route("/api/products/<int:id>", methods=["DELETE"])
-def delete_product(id):
+# @app.route("/api/products/<int:id>", methods=["DELETE"])
+# def delete_product(id):
 
-    conn = pyodbc.connect(
-    'DRIVER={SQL Server};'
-    f'SERVER={server};'
-    f'DATABASE={database};'
-    'Trusted_Connection=yes;')
-    cursor = conn.cursor()
-    cursor.execute("DELETE FROM Product WHERE product_id = ?", (id,))
-    conn.commit()
+#     conn = pyodbc.connect(
+#     'DRIVER={SQL Server};'
+#     f'SERVER={server};'
+#     f'DATABASE={database};'
+#     'Trusted_Connection=yes;')
+#     cursor = conn.cursor()
+#     cursor.execute("DELETE FROM Product WHERE product_id = ?", (id,))
+#     conn.commit()
 
-    return jsonify({"message": "Xóa thành công"})
+#     return jsonify({"message": "Xóa thành công"})
 
 @app.route("/api/products/filter", methods=["POST"])
 def filter_products():
@@ -584,6 +584,7 @@ def filter_products():
     SELECT DISTINCT p.*
     FROM Product p
     WHERE p.menu_id IN (2,3,4)
+    AND is_active = 1
     """
     params = []
 
@@ -1370,7 +1371,7 @@ def related_products(id):
         JOIN Product p
         ON pr.related_product_id = p.product_id
 
-        WHERE pr.product_id = ?
+        WHERE pr.product_id = ? AND is_active = 1
 
     """, (id,))
 
@@ -1452,7 +1453,7 @@ def get_products_by_menu(menu_id):
             price,
             discount_price
         FROM Product
-        WHERE menu_id = ?
+        WHERE menu_id = ? AND is_active = 1
     """, (menu_id,))
 
     rows = cursor.fetchall()
@@ -1522,22 +1523,256 @@ def upload_product_image():
 
     file = request.files.get("image")
 
-    if not file:
-        return jsonify({"error": "Không có file"}), 400
+    if file and file.filename != "":
 
-    filename = f"{uuid.uuid4()}_{secure_filename(file.filename)}"
+        filename = f"{uuid.uuid4()}_{secure_filename(file.filename)}"
 
-    print(PRODUCT_IMAGE_FOLDER)
+        print(PRODUCT_IMAGE_FOLDER)
 
-    filepath = os.path.join(PRODUCT_IMAGE_FOLDER, filename)
+        filepath = os.path.join(PRODUCT_IMAGE_FOLDER, filename)
 
-    file.save(filepath)
+        file.save(filepath)
 
-    image_path = f"images/{filename}"
-
+        image_path = f"images/{filename}"
+    else:
+        return jsonify({"message": "no image uploaded"}), 200
     return jsonify({
         "image": image_path
     })
+
+@app.route("/api/edit-product/<int:product_id>")
+def get_product(product_id):
+
+    conn = pyodbc.connect(
+        'DRIVER={SQL Server};'
+        f'SERVER={server};'
+        f'DATABASE={database};'
+        'Trusted_Connection=yes;'
+    )
+
+    cursor = conn.cursor()
+
+    cursor.execute("""
+        SELECT
+            product_id,
+            name,
+            image,
+            price,
+            discount_price,
+            qty,
+            menu_id,
+            is_active
+        FROM Product
+        WHERE product_id = ?
+    """, (product_id,))
+
+    row = cursor.fetchone()
+
+    product = {
+        "product_id": row[0],
+        "name": row[1],
+        "image": row[2],
+        "price": float(row[3]),
+        "discount_price": float(row[4]),
+        "qty": row[5],
+        "menu_id": row[6],
+        "is_active": row[7]
+    }
+
+    cursor.execute("""
+        SELECT
+            a.attribute_id,
+            a.name
+        FROM MenuAttribute ma
+        JOIN Attribute a
+            ON ma.attribute_id = a.attribute_id
+        WHERE ma.menu_id = ?
+    """, (product["menu_id"],))
+
+    menu_attrs = cursor.fetchall()
+
+    cursor.execute("""
+        SELECT
+            attribute_id,
+            value
+        FROM ProductAttribute
+        WHERE product_id = ?
+    """, (product_id,))
+
+    values = {
+        r[0]: r[1]
+        for r in cursor.fetchall()
+    }
+
+    attributes = []
+
+    for r in menu_attrs:
+
+        attributes.append({
+            "id": r[0],
+            "name": r[1],
+            "value": values.get(r[0], "")
+        })
+
+    cursor.execute("""
+        SELECT related_product_id
+        FROM ProductRelated
+        WHERE product_id = ?
+    """, (product_id,))
+
+    related = [
+        r[0]
+        for r in cursor.fetchall()
+    ]
+
+    conn.close()
+
+    return jsonify({
+        "product": product,
+        "attributes": attributes,
+        "related": related
+    })  
+
+@app.route("/api/update-edit-products/<int:product_id>", methods=["PUT"])
+def update_product(product_id):
+    try:
+        data = request.json
+
+        product = data.get("product", {})
+        attributes = data.get("attributes", [])
+        related = data.get("related", [])
+
+        conn = pyodbc.connect(
+            'DRIVER={SQL Server};'
+            f'SERVER={server};'
+            f'DATABASE={database};'
+            'Trusted_Connection=yes;'
+        )
+        cursor = conn.cursor()
+
+        # fallback image tránh NULL crash
+        image = product.get("image") or ""
+
+        cursor.execute("""
+            UPDATE Product
+            SET name=?,
+                price=?,
+                discount_price=?,
+                qty=?,
+                menu_id=?,
+                is_active=?,
+                image=?
+            WHERE product_id=?
+        """,
+        product.get("name"),
+        product.get("price"),
+        product.get("discount_price"),
+        product.get("qty"),
+        product.get("menu_id"),
+        product.get("is_active"),
+        image,
+        product_id)
+
+        # attributes reset
+        cursor.execute("DELETE FROM ProductAttribute WHERE product_id=?", product_id)
+
+        for a in attributes:
+            if not a.get("value"):
+                continue
+            cursor.execute("""
+                INSERT INTO ProductAttribute(product_id, attribute_id, value)
+                VALUES (?, ?, ?)
+            """, product_id, a.get("id"), a.get("value"))
+
+        # related reset
+        cursor.execute("DELETE FROM ProductRelated WHERE product_id=?", product_id)
+
+        for r in related:
+            cursor.execute("""
+                INSERT INTO ProductRelated(product_id, related_product_id)
+                VALUES (?, ?)
+            """, product_id, r)
+
+        conn.commit()
+        conn.close()
+
+        print(data)
+        print(product_id)
+
+        return jsonify({"message": "updated"})
+
+    except Exception as e:
+        print("ERROR:", e)   # <<< QUAN TRỌNG
+        return jsonify({"error": str(e)}), 500
+
+@app.route("/api/delete-products/<int:product_id>", methods=["DELETE"])
+def delete_product(product_id):
+
+    conn = pyodbc.connect(
+            'DRIVER={SQL Server};'
+            f'SERVER={server};'
+            f'DATABASE={database};'
+            'Trusted_Connection=yes;'
+        )
+    cursor = conn.cursor()
+
+    try:
+        # 1. xóa liên kết trước (quan trọng)
+        cursor.execute("DELETE FROM ProductAttribute WHERE product_id=?", product_id)
+        cursor.execute("DELETE FROM ProductRelated WHERE product_id=?", product_id)
+
+        # 2. xóa product
+        cursor.execute("DELETE FROM Product WHERE product_id=?", product_id)
+
+        conn.commit()
+        return jsonify({"message": "deleted"})
+
+    except Exception as e:
+        conn.rollback()
+        return jsonify({"error": str(e)}), 500
+
+    finally:
+        conn.close()
+
+@app.route("/api/delete-products/<int:product_id>", methods=["DELETE"])
+def delete_image_product(product_id):
+
+    conn = pyodbc.connect(
+            'DRIVER={SQL Server};'
+            f'SERVER={server};'
+            f'DATABASE={database};'
+            'Trusted_Connection=yes;'
+        )
+    cursor = conn.cursor()
+
+    try:
+        # lấy image trước khi xóa
+        cursor.execute("SELECT image FROM Product WHERE product_id=?", product_id)
+        row = cursor.fetchone()
+
+        image_path = row[0] if row else None
+
+        # xóa DB
+        cursor.execute("DELETE FROM ProductAttribute WHERE product_id=?", product_id)
+        cursor.execute("DELETE FROM ProductRelated WHERE product_id=?", product_id)
+        cursor.execute("DELETE FROM Product WHERE product_id=?", product_id)
+
+        conn.commit()
+
+        # xóa file
+        if image_path:
+            full_path = os.path.join(PRODUCT_IMAGE_FOLDER, image_path.replace("images/", ""))
+            if os.path.exists(full_path):
+                os.remove(full_path)
+
+        return jsonify({"message": "deleted"})
+
+    except Exception as e:
+        conn.rollback()
+        return jsonify({"error": str(e)}), 500
+
+    finally:
+        conn.close()
 
 if __name__ == "__main__":
     app.run(host='localhost', port=5000, debug=True, use_reloader=False, threaded=True) 

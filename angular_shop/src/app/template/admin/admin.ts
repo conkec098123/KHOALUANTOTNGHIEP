@@ -10,7 +10,7 @@ import { DecimalPipe } from '@angular/common';
   templateUrl: './admin.html',
   styleUrl: './admin.css',
 })
-export class Admin implements OnInit{
+export class Admin implements OnInit {
   title = signal('Laptop Store');
 
   products = signal<any[]>([]);
@@ -19,12 +19,12 @@ export class Admin implements OnInit{
 
   cart = signal<string[]>([]);
 
-  constructor(private http: HttpClient, private router: Router) {}
-    goToEdit(id: number) {
+  constructor(private http: HttpClient, private router: Router) { }
+  goToEdit(id: number) {
     console.log("CLICK ID:", id);
     this.router.navigate(['/edit-product', id]);
   }
-  
+
 
   ngOnInit() {
     this.http.get<any[]>(`${environment.apiUrl}/api/products`, { withCredentials: true })
@@ -42,13 +42,19 @@ export class Admin implements OnInit{
 
   deleteProduct(id: number) {
     if (confirm("Bạn có chắc muốn xóa không?")) {
-      this.http.delete(`${environment.apiUrl}/api/products/${id}`)
-        .subscribe(() => {
-          alert("Đã xóa!");
 
-          // reload lại danh sách
-          this.products.update(list => list.filter(p => p.id !== id));
-        });
+      this.http.delete(
+        `${environment.apiUrl}/api/delete-products/${id}`
+      ).subscribe(() => {
+
+        alert("Đã xóa!");
+
+        // update UI
+        this.products.update(list =>
+          list.filter(p => p.product_id !== id)
+        );
+      });
+
     }
   }
 

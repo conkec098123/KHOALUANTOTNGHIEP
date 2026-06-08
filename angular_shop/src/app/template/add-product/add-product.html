@@ -44,10 +44,9 @@
       <!-- Status -->
       <div class="mb-3">
         <label>Trạng thái</label>
-        <select class="form-control" [(ngModel)]="product.status" name="status">
-          <option value="con hang">Còn hàng</option>
-          <option value="het hang">Hết hàng</option>
-          <option value="an">Ẩn</option>
+        <select [(ngModel)]="product.is_active" name="is_active">
+          <option [ngValue]="true">Hiển thị</option>
+          <option [ngValue]="false">Ẩn</option>
         </select>
       </div>
     </div>
