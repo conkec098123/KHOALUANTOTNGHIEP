@@ -99,6 +99,11 @@ export class App implements OnInit{
     this.isOpen = false;
   }
 
+  gotousersmanagement() {
+    this.router.navigate(['/users-management'])
+    this.isOpen = false;
+  }
+
   search() {
     console.log("SEARCH:", this.keyword);
     this.searchService.keyword.set(this.keyword);

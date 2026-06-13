@@ -17,6 +17,7 @@ import { OrderManagement } from './template/order-management/order-management';
 import { OrderDetail } from './template/order-detail/order-detail';
 import { Review } from './template/review/review';
 import { MainHome } from './template/main-home/main-home';
+import { UsersManagement } from './template/users-management/users-management';
 
 export const routes: Routes = [
     {
@@ -91,5 +92,9 @@ export const routes: Routes = [
     {
         path:"review/:id",
         component:Review
+    },
+    {
+        path:"users-management",
+        component:UsersManagement
     },
 ];

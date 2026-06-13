@@ -1,0 +1,38 @@
+<table class="table table-bordered">
+    <thead>
+        <tr>
+            <th>Id</th>
+            <th>Avatar</th>
+            <th>Username</th>
+            <th>Email</th>
+            <th>Active</th>
+        </tr>
+    </thead>
+
+    <tbody>
+        @for (user of users(); track user.user_id) {
+        <tr>
+            <td>{{ user.user_id }}</td>
+
+            <td>
+                <img [src]="environment.apiUrl + '/' + user.avatar" width="50">
+            </td>
+
+            <td>{{ user.username }}</td>
+
+            <td>{{ user.email }}</td>
+
+            <td>{{ user.active }}</td>
+
+            <td>
+                <!-- <button class="btn btn-sm btn-danger" (click)="deleteProduct(user.user_id)">
+                    Xem
+                </button>
+                <button class="btn btn-sm btn-danger" (click)="deleteProduct(user.user_id)">
+                    Xóa
+                </button> -->
+            </td>
+        </tr>
+        }
+    </tbody>
+</table>

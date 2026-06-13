@@ -45,6 +45,9 @@
               <li *ngIf="cartService.user()?.role === 'admin'">
                 <a class="dropdown-item" (click)="gotoaddproduct()">Thêm sản phẩm</a>
               </li>
+              <li *ngIf="cartService.user()?.role === 'admin'">
+                <a class="dropdown-item" (click)="gotousersmanagement()">Quản lý người dùng</a>
+              </li>
               <li>
                 <a class="dropdown-item" (click)="logout()">Đăng xuất</a>
               </li>

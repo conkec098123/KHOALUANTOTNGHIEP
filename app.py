@@ -41,7 +41,14 @@ print("Connected successfully!")
 
 UPLOAD_FOLDER = "static/uploads"
 
-PRODUCT_IMAGE_FOLDER = r"C:\Users\ph\Downloads\dangdung\KHOALUANTOTNGHIEP\angular_shop\public\images"
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+
+PRODUCT_IMAGE_FOLDER = os.path.join(
+    BASE_DIR,
+    "angular_shop",
+    "public",
+    "images"
+)
 
 @app.route("/api/products")
 def api_products():
@@ -522,46 +529,6 @@ def add_product():
         conn.rollback()
         print(e)
     return jsonify({"message": "Thêm sản phẩm thành công"})
-
-# @app.route("/api/products/<int:id>", methods=["PUT"])
-# def update_product(id):
-
-#     conn = pyodbc.connect(
-#     'DRIVER={SQL Server};'
-#     f'SERVER={server};'
-#     f'DATABASE={database};'
-#     'Trusted_Connection=yes;')
-#     cursor = conn.cursor()
-#     data = request.get_json()
-
-#     name = data.get("name")
-#     price = float(data.get("price"))
-#     discount_price = float(data.get("discount_price"))
-#     qty = int(data.get("qty"))
-
-#     cursor.execute("""
-#         UPDATE Product
-#         SET name = ?, price = ?, discount_price = ?, qty = ?
-#         WHERE product_id = ?
-#     """, (name, price, discount_price, qty, id))
-
-#     conn.commit()
-
-#     return jsonify({"message": "Cập nhật thành công"})
-
-# @app.route("/api/products/<int:id>", methods=["DELETE"])
-# def delete_product(id):
-
-#     conn = pyodbc.connect(
-#     'DRIVER={SQL Server};'
-#     f'SERVER={server};'
-#     f'DATABASE={database};'
-#     'Trusted_Connection=yes;')
-#     cursor = conn.cursor()
-#     cursor.execute("DELETE FROM Product WHERE product_id = ?", (id,))
-#     conn.commit()
-
-#     return jsonify({"message": "Xóa thành công"})
 
 @app.route("/api/products/filter", methods=["POST"])
 def filter_products():
@@ -1773,6 +1740,97 @@ def delete_image_product(product_id):
 
     finally:
         conn.close()
+
+@app.route("/api/users")
+def api_users():
+    conn = pyodbc.connect(
+    'DRIVER={SQL Server};'
+    f'SERVER={server};'
+    f'DATABASE={database};'
+    'Trusted_Connection=yes;')
+    cursor = conn.cursor()
+    cursor.execute("""
+        SELECT customer_id, full_name, email, active, avatar
+        FROM Customer
+    """)
+
+    rows = cursor.fetchall()
+
+    users = []
+
+    for r in rows:
+        users.append({
+            "user_id": r.customer_id,
+            "username": r.full_name,
+            "email": r.email,
+            "active": bool(r.active),
+            "avatar": r.avatar
+        })
+
+    conn.close()
+
+    return jsonify(users)
+
+@app.route("/api/users/<int:id>")
+def api_users_detail(id):
+    conn = pyodbc.connect(
+    'DRIVER={SQL Server};'
+    f'SERVER={server};'
+    f'DATABASE={database};'
+    'Trusted_Connection=yes;')
+    cursor = conn.cursor()
+
+    cursor.execute("""
+        SELECT customer_id, full_name, email, active
+        FROM Customer
+        WHERE customer_id = ?
+    """, (id,))
+
+    r = cursor.fetchone()
+
+    conn.close()
+
+    if not r:
+        return jsonify({
+            "message": "Không tìm thấy người dùng"
+        }), 404
+
+    return jsonify({
+        "user_id": r.customer_id,
+        "username": r.full_name,
+        "email": r.email,
+        "active": bool(r.active)
+    })
+
+
+@app.route("/api/users/<int:id>/active",methods=["PUT"])
+def update_active(id):
+
+    data = request.get_json()
+
+    conn = pyodbc.connect(
+    'DRIVER={SQL Server};'
+    f'SERVER={server};'
+    f'DATABASE={database};'
+    'Trusted_Connection=yes;')
+
+    cursor = conn.cursor()
+
+    cursor.execute("""
+    UPDATE Customer
+    SET active=?
+    WHERE customer_id=?
+    """,
+    data["active"],
+    id)
+
+    conn.commit()
+
+    conn.close()
+
+    return jsonify({
+        "message":"OK"
+    })
 
 if __name__ == "__main__":
     app.run(host='localhost', port=5000, debug=True, use_reloader=False, threaded=True) 
