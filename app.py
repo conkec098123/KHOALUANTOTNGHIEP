@@ -206,12 +206,18 @@ def login():
         })
 
     cursor.execute("""
-        SELECT customer_id, full_name, avatar
+        SELECT customer_id, full_name, avatar, active
         FROM Customer
         WHERE full_name = ? AND password = ?
     """, (username, password))
 
     customer = cursor.fetchone()
+
+    if not customer:
+        return jsonify({"message": "Sai email hoặc mật khẩu"}), 401
+
+    if customer.active == 0:
+        return jsonify({"message": "Tài khoản đã bị khóa"}), 403
     print("CUSTOMER FOUND:", customer)
 
     if customer:
@@ -1774,14 +1780,25 @@ def api_users():
 @app.route("/api/users/<int:id>")
 def api_users_detail(id):
     conn = pyodbc.connect(
-    'DRIVER={SQL Server};'
-    f'SERVER={server};'
-    f'DATABASE={database};'
-    'Trusted_Connection=yes;')
+        'DRIVER={SQL Server};'
+        f'SERVER={server};'
+        f'DATABASE={database};'
+        'Trusted_Connection=yes;'
+    )
+
     cursor = conn.cursor()
 
     cursor.execute("""
-        SELECT customer_id, full_name, email, active
+        SELECT
+            customer_id,
+            customer_code,
+            full_name,
+            email,
+            avatar,
+            phone_number,
+            dob,
+            gender,
+            active
         FROM Customer
         WHERE customer_id = ?
     """, (id,))
@@ -1797,39 +1814,42 @@ def api_users_detail(id):
 
     return jsonify({
         "user_id": r.customer_id,
-        "username": r.full_name,
+        "customer_code": r.customer_code,
+        "full_name": r.full_name,
         "email": r.email,
+        "avatar": r.avatar,
+        "phone_number": r.phone_number,
+        "dob": str(r.dob) if r.dob else None,
+        "gender": r.gender,
         "active": bool(r.active)
     })
 
 
-@app.route("/api/users/<int:id>/active",methods=["PUT"])
-def update_active(id):
+@app.route("/api/users/<int:id>/active", methods=["PUT"])
+def update_user_active(id):
 
     data = request.get_json()
 
     conn = pyodbc.connect(
-    'DRIVER={SQL Server};'
-    f'SERVER={server};'
-    f'DATABASE={database};'
-    'Trusted_Connection=yes;')
+        'DRIVER={SQL Server};'
+        f'SERVER={server};'
+        f'DATABASE={database};'
+        'Trusted_Connection=yes;'
+    )
 
     cursor = conn.cursor()
 
     cursor.execute("""
-    UPDATE Customer
-    SET active=?
-    WHERE customer_id=?
-    """,
-    data["active"],
-    id)
+        UPDATE Customer
+        SET active = ?
+        WHERE customer_id = ?
+    """, (data["active"], id))
 
     conn.commit()
-
     conn.close()
 
     return jsonify({
-        "message":"OK"
+        "message": "Cập nhật thành công"
     })
 
 if __name__ == "__main__":

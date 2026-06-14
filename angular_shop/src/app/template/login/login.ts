@@ -72,44 +72,53 @@ export class Login {
 
       error: (err) => {
         console.log('LOGIN ERROR:', err);
-        alert('Sai tài khoản hoặc mật khẩu');
+
+        if (err.status === 403) {
+          alert('Tài khoản đã bị khóa');
+        }
+        else if (err.status === 401) {
+          alert('Sai tài khoản hoặc mật khẩu');
+        }
+        else {
+          alert('Đã xảy ra lỗi');
+        }
       }
     });
   }
   afterLogin(loginRes: any) {
 
-  this.cartService.user()
+    this.cartService.user()
 
-  this.http.get<any>(
-    `${environment.apiUrl}/api/current-user`,
-    { withCredentials: true }
-  ).subscribe({
-    next: (user) => {
+    this.http.get<any>(
+      `${environment.apiUrl}/api/current-user`,
+      { withCredentials: true }
+    ).subscribe({
+      next: (user) => {
 
-      this.cartService.user.set(user);
+        this.cartService.user.set(user);
 
-      // 2. load cart
-      this.cartService.loadCartFromDB().subscribe({
-        next: (cartData) => {
-          this.cartService.cart.set(cartData || []);
+        // 2. load cart
+        this.cartService.loadCartFromDB().subscribe({
+          next: (cartData) => {
+            this.cartService.cart.set(cartData || []);
 
-          const total = this.cartService.getTotal();
-        },
-        error: () => {
-          this.cartService.cart.set([]);
-        }
-      });
+            const total = this.cartService.getTotal();
+          },
+          error: () => {
+            this.cartService.cart.set([]);
+          }
+        });
 
-      // 3. navigate
-      this.router.navigate([
-        loginRes.role === 'admin' ? '/admin' : '/'
-      ]);
+        // 3. navigate
+        this.router.navigate([
+          loginRes.role === 'admin' ? '/admin' : '/'
+        ]);
 
-    },
-    error: () => {
-      this.cartService.user.set(null);
-      this.router.navigate(['/']);
-    }
-  });
-}
+      },
+      error: () => {
+        this.cartService.user.set(null);
+        this.router.navigate(['/']);
+      }
+    });
+  }
 }

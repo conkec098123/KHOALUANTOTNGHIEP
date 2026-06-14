@@ -22,17 +22,46 @@
 
             <td>{{ user.email }}</td>
 
-            <td>{{ user.active }}</td>
+            <td>
+                {{ user.active ? 'Hoạt động' : 'Đã khóa' }}
+            </td>
 
             <td>
-                <!-- <button class="btn btn-sm btn-danger" (click)="deleteProduct(user.user_id)">
-                    Xem
+                <button class="btn btn-sm btn-danger" (click)="viewUser(user.user_id)">
+                    Xem chi tiết
                 </button>
-                <button class="btn btn-sm btn-danger" (click)="deleteProduct(user.user_id)">
-                    Xóa
-                </button> -->
+            <td>
+                <button class="btn btn-warning" (click)="toggleActive(user)" [disabled]="loading()">
+
+                    {{ user.active ? 'Khóa' : 'Mở khóa' }}
+
+                </button>
             </td>
         </tr>
         }
     </tbody>
 </table>
+<div class="modal-backdrop" *ngIf="selectedUser()">
+
+    <div class="modal-content">
+
+        <h4>Thông tin người dùng</h4>
+
+        <p>Mã KH: {{ selectedUser()?.customer_code }}</p>
+        <p>Họ tên: {{ selectedUser()?.full_name }}</p>
+        <p>Email: {{ selectedUser()?.email }}</p>
+        <p>SĐT: {{ selectedUser()?.phone_number }}</p>
+        <p>Ngày sinh: {{ selectedUser()?.dob }}</p>
+        <p>Giới tính: {{ selectedUser()?.gender }}</p>
+
+        <p>
+        Trạng thái:
+        {{ selectedUser()?.active ? 'Hoạt động' : 'Đã khóa' }}
+        </p>
+
+        <button class="btn btn-secondary" (click)="closeModal()">
+            Đóng
+        </button>
+
+    </div>
+</div>
