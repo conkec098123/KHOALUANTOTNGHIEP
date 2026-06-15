@@ -20,12 +20,18 @@
       <div class="mb-3">
 
         <span class="fs-3 text-danger fw-bold">
-          {{ product()?.price }}đ
+          {{ product()?.discount_price | number:'1.0-0' }}đ
         </span>
 
         <span class="text-decoration-line-through text-secondary ms-2">
-          {{ product()?.discount_price }}đ
+          {{ product()?.price | number:'1.0-0' }}đ
         </span>
+
+        <div class="card p-3 mb-3 bg-light">
+        <div> Giao hàng toàn quốc</div>
+        <div> Bảo hành chính hãng</div>
+        <div> Hỗ trợ thanh toán khi nhận hàng</div>
+      </div>
 
       </div>
 
@@ -33,7 +39,7 @@
 
         <h5>Thông số kỹ thuật</h5>
 
-        <div *ngFor="let attr of (product()?.attributes || [])" class="d-flex justify-content-between border-bottom py-2">
+        <div *ngFor="let attr of (product()?.attributes || [])" class="spec-row d-flex justify-content-between border-bottom py-2">
 
           <span>{{ attr.name }}</span>
 
@@ -56,7 +62,7 @@
           Mua ngay
         </button>
 
-        <button class="btn btn-outline-dark btn-lg" (click)="addToCart()">
+        <button class="btn btn-outline-danger btn-lg" (click)="addToCart()">
           Thêm vào giỏ
         </button>
 
@@ -107,17 +113,25 @@
 
   <h4>Đánh giá sản phẩm</h4>
 
-  <div *ngFor="let r of reviews()" class="border p-2 mb-2">
+  <div
+  *ngFor="let r of reviews()"
+  class="card p-3 mb-3">
+
+  <div class="d-flex justify-content-between">
 
     <strong>{{ r.username }}</strong>
 
-    <div>
+    <span class="text-warning">
       ⭐ {{ r.star }}/5
-    </div>
-
-    <p>{{ r.content }}</p>
+    </span>
 
   </div>
+
+  <p class="mt-2 mb-0">
+    {{ r.content }}
+  </p>
+
+</div>
 
 </div>
 

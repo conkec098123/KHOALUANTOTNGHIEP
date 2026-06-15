@@ -104,6 +104,31 @@ export class App implements OnInit{
     this.isOpen = false;
   }
 
+  gotouserstatistics() {
+    this.router.navigate(['/user-statistics'])
+    this.isOpen = false;
+  }
+
+  gotoproductstatistics() {
+    this.router.navigate(['/product-statistics'])
+    this.isOpen = false;
+  }
+
+  gotorevenuestatistics() {
+    this.router.navigate(['/revenue-statistics'])
+    this.isOpen = false;
+  }
+
+  gotoorder() {
+    this.router.navigate(['/admin-order'])
+    this.isOpen = false;
+  }
+
+  gototransaction() {
+    this.router.navigate(['/transaction-management'])
+    this.isOpen = false;
+  }
+
   search() {
     console.log("SEARCH:", this.keyword);
     this.searchService.keyword.set(this.keyword);

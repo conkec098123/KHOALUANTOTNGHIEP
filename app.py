@@ -1824,7 +1824,6 @@ def api_users_detail(id):
         "active": bool(r.active)
     })
 
-
 @app.route("/api/users/<int:id>/active", methods=["PUT"])
 def update_user_active(id):
 
@@ -1851,6 +1850,164 @@ def update_user_active(id):
     return jsonify({
         "message": "Cập nhật thành công"
     })
+
+@app.route("/api/statistics/users")
+def statistics_users():
+
+    year = request.args.get("year")
+
+    conn = pyodbc.connect(
+        'DRIVER={SQL Server};'
+        f'SERVER={server};'
+        f'DATABASE={database};'
+        'Trusted_Connection=yes;'
+    )
+
+    cursor = conn.cursor()
+
+    cursor.execute("""
+        SELECT
+            MONTH(created_at) AS month,
+            COUNT(*) AS total
+        FROM Customer
+        WHERE YEAR(created_at) = ?
+        GROUP BY MONTH(created_at)
+        ORDER BY month
+    """, (year,))
+
+    rows = cursor.fetchall()
+
+    data = []
+
+    for r in rows:
+        data.append({
+            "month": r.month,
+            "count": r.total
+        })
+
+    conn.close()
+
+    return jsonify(data)
+
+@app.route("/api/statistics/products")
+def statistics_products():
+
+    year = request.args.get("year")
+
+    conn = pyodbc.connect(
+        'DRIVER={SQL Server};'
+        f'SERVER={server};'
+        f'DATABASE={database};'
+        'Trusted_Connection=yes;'
+    )
+
+    cursor = conn.cursor()
+
+    cursor.execute("""
+        SELECT
+            MONTH(created_at) AS month,
+            COUNT(*) AS total
+        FROM Product
+        WHERE YEAR(created_at) = ?
+        GROUP BY MONTH(created_at)
+        ORDER BY month
+    """, (year,))
+
+    rows = cursor.fetchall()
+
+    data = []
+
+    for r in rows:
+        data.append({
+            "month": r.month,
+            "count": r.total
+        })
+
+    conn.close()
+
+    return jsonify(data)
+
+@app.route("/api/statistics/revenue")
+def statistics_revenue():
+
+    year = request.args.get("year")
+
+    conn = pyodbc.connect(
+        'DRIVER={SQL Server};'
+        f'SERVER={server};'
+        f'DATABASE={database};'
+        'Trusted_Connection=yes;'
+    )
+
+    cursor = conn.cursor()
+
+    cursor.execute("""
+        SELECT
+            MONTH(order_date) AS month,
+            SUM(total_price) AS revenue
+        FROM Orders
+        WHERE order_status = N'delivered' AND YEAR(order_date) = ?
+        GROUP BY MONTH(order_date)
+        ORDER BY month
+    """, (year,))
+
+    rows = cursor.fetchall()
+
+    data = []
+
+    for r in rows:
+        data.append({
+            "month": r.month,
+            "revenue": float(r.revenue)
+        })
+
+    conn.close()
+
+    return jsonify(data)
+
+@app.route("/api/admin/orders")
+def get_admin_orders():
+
+    conn = pyodbc.connect(
+        'DRIVER={SQL Server};'
+        f'SERVER={server};'
+        f'DATABASE={database};'
+        'Trusted_Connection=yes;'
+    )
+
+    cursor = conn.cursor()
+
+    cursor.execute("""
+        SELECT
+            o.order_id,
+            c.full_name,
+            o.total_price,
+            o.order_status,
+            o.order_date
+        FROM Orders o
+        LEFT JOIN Customer c
+            ON o.customer_id = c.customer_id
+        ORDER BY o.order_date DESC
+    """)
+
+    rows = cursor.fetchall()
+
+    orders = []
+
+    for row in rows:
+        orders.append({
+            "order_id": row.order_id,
+            "full_name": row.full_name,
+            "total_price": float(row.total_price),
+            "order_status": row.order_status,
+            "order_date": row.order_date
+        })
+
+    conn.close()
+
+    print(orders)
+
+    return jsonify(orders)
 
 if __name__ == "__main__":
     app.run(host='localhost', port=5000, debug=True, use_reloader=False, threaded=True) 

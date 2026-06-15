@@ -18,6 +18,12 @@ import { OrderDetail } from './template/order-detail/order-detail';
 import { Review } from './template/review/review';
 import { MainHome } from './template/main-home/main-home';
 import { UsersManagement } from './template/users-management/users-management';
+import { UserStatistics } from './template/user-statistics/user-statistics';
+import { ProductStatistics } from './template/product-statistics/product-statistics';
+import { RevenueStatistics } from './template/revenue-statistics/revenue-statistics';
+import { AdminOrder } from './template/admin-order/admin-order';
+import { TransactionManagement } from './template/transaction-management/transaction-management';
+
 
 export const routes: Routes = [
     {
@@ -96,5 +102,25 @@ export const routes: Routes = [
     {
         path:"users-management",
         component:UsersManagement
+    },
+    {
+        path:"user-statistics",
+        component:UserStatistics
+    },
+    {
+        path:"product-statistics",
+        component:ProductStatistics
+    },
+    {
+        path:"revenue-statistics",
+        component:RevenueStatistics
+    },
+    {
+        path:"admin-order",
+        component:AdminOrder
+    },
+    {
+        path:"transaction-management",
+        component:TransactionManagement
     },
 ];

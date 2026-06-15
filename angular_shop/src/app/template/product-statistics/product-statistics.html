@@ -1,0 +1,25 @@
+<div class="statistics-container">
+
+    <h2>Thống kê sản phẩm</h2>
+
+    <div class="filter">
+        <label>Năm:</label>
+
+        <select
+            [(ngModel)]="year"
+            (change)="loadStatistics()">
+
+            <option [value]="2025">2025</option>
+            <option [value]="2026">2026</option>
+
+        </select>
+    </div>
+
+    <div class="card">
+        <h3>Tổng số người dùng</h3>
+        <p>{{ totalProducts() }}</p>
+    </div>
+
+    <canvas id="userChart"></canvas>
+
+</div>

@@ -1,0 +1,62 @@
+<h2>Quản lý đơn hàng</h2>
+
+<div class="filter">
+
+  <input
+    type="text"
+    placeholder="Tìm mã đơn..."
+    [(ngModel)]="search"
+    (input)="filterOrders()">
+
+  <select
+    [(ngModel)]="status"
+    (change)="filterOrders()">
+
+    <option value="">Tất cả</option>
+    <option value="pending">Chờ xử lý</option>
+    <option value="shipping">Đang giao</option>
+    <option value="delivered">Đã giao</option>
+    <option value="cancelled">Đã hủy</option>
+
+  </select>
+
+</div>
+
+<table class='table table-bordered'>
+
+  <thead>
+    <tr>
+      <th>Mã đơn</th>
+      <th>Khách hàng</th>
+      <th>Tổng tiền</th>
+      <th>Trạng thái</th>
+      <th>Ngày đặt</th>
+    </tr>
+  </thead>
+
+  <tbody>
+
+    @for (order of filteredOrders(); track order.order_id) {
+      <tr>
+
+        <td>{{ order.order_id }}</td>
+        <td>{{ order.full_name }}</td>
+
+        <td>
+          {{ order.total_price | number }} đ
+        </td>
+
+        <td>
+          {{ order.order_status }}
+        </td>
+
+        <td>
+          {{ order.order_date | date:'dd/MM/yyyy HH:mm' }}
+        </td>
+
+      </tr>
+    }
+
+  </tbody>
+
+</table>
