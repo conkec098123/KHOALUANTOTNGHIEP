@@ -8,6 +8,24 @@
     [(ngModel)]="search"
     (input)="filterOrders()">
 
+    <button
+    class="btn btn-outline-primary"
+    (click)="setPeriod('today')">
+    Hôm nay
+  </button>
+
+  <button
+    class="btn btn-outline-primary"
+    (click)="setPeriod('week')">
+    7 ngày gần đây
+  </button>
+
+  <button
+    class="btn btn-outline-primary"
+    (click)="setPeriod('old')">
+    Cũ hơn
+  </button>
+
   <select
     [(ngModel)]="status"
     (change)="filterOrders()">

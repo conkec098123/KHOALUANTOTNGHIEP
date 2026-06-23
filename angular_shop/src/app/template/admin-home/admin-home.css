@@ -1,0 +1,122 @@
+.dashboard {
+  display: grid;
+  grid-template-columns: 1fr 1fr; /* 50 - 50 */
+  gap: 16px;
+  height: 100vh;
+}
+
+/* LEFT */
+.left {
+  display: grid;
+  grid-template-rows: repeat(3, 1fr);
+  gap: 16px;
+}
+
+/* RIGHT */
+.right {
+  display: grid;
+  grid-template-rows: 1fr 1fr; /* 50 - 50 */
+  gap: 16px;
+}
+
+/* card */
+.card {
+  background: white;
+  border-radius: 12px;
+  padding: 16px;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+}
+
+/* table nhỏ */
+.mini-table {
+  width: 100%;
+  font-size: 13px;
+  border-collapse: collapse;
+}
+
+.mini-table th,
+.mini-table td {
+  padding: 6px;
+  border-bottom: 1px solid #eee;
+}
+
+.mini-table button {
+  padding: 4px 8px;
+  font-size: 12px;
+  border: none;
+  background: #1677ff;
+  color: white;
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+.card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 10px;
+}
+
+.btn-link {
+  background: none;
+  border: none;
+  color: #1677ff;
+  cursor: pointer;
+  font-weight: 500;
+}
+
+.btn-link:hover {
+  text-decoration: underline;
+}
+
+.scroll-box {
+  max-height:280px;   /* 👈 chỉnh nhỏ / lớn tùy bạn */
+  overflow-y: auto;    /* 👈 scroll dọc */
+}
+
+.product-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  max-height: 220px;
+  overflow-y: auto;
+  padding-right: 5px;
+}
+
+/* item card */
+.product-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px;
+  border-radius: 10px;
+  background: #f9f9f9;
+  transition: 0.2s;
+}
+
+/* hover nhẹ */
+.product-item:hover {
+  background: #f1f5ff;
+  transform: translateY(-1px);
+}
+
+/* ảnh */
+.product-img {
+  width: 45px;
+  height: 45px;
+  object-fit: cover;
+  border-radius: 8px;
+}
+
+/* text */
+.product-info .name {
+  margin: 0;
+  font-size: 14px;
+  font-weight: 500;
+}
+
+/* badge sold */
+.sold {
+  font-size: 12px;
+  color: #666;
+}

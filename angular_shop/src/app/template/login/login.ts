@@ -111,7 +111,7 @@ export class Login {
 
         // 3. navigate
         this.router.navigate([
-          loginRes.role === 'admin' ? '/admin' : '/'
+          loginRes.role === 'admin' ? '/admin-home' : '/'
         ]);
 
       },

@@ -62,10 +62,21 @@ export class App implements OnInit{
   }
 
   isOpen = false;
+  openMenu = '';
 
   toggleDropdown() {
-    this.isOpen = !this.isOpen;
+    this.isOpen = !this.isOpen
   }
+
+toggleMenu(menu: string) {
+  this.openMenu =
+    this.openMenu === menu
+      ? ''
+      : menu;
+}
+closeMenu() {
+  this.openMenu = '';
+}
 
   logout() {
     if (confirm("xác nhận đăng xuất")) {
@@ -73,7 +84,6 @@ export class App implements OnInit{
         .subscribe(() => {
           this.cartService.user.set(null);
           this.cartService.cart.set([]);
-          this.isOpen = false;
           this.router.navigate(['/']);
         });
     }
@@ -81,52 +91,57 @@ export class App implements OnInit{
 
   gotochangepassword() {
     this.router.navigate(['/change-password'])
-    this.isOpen = false;
+    this.isOpen = false
   }
 
   gotoprofile() {
     this.router.navigate(['/profile'])
-    this.isOpen = false;
+    this.isOpen = false
   }
 
   gotoordermanagement() {
     this.router.navigate(['/order-management'])
-    this.isOpen = false;
+    this.isOpen = false
   }
 
   gotoaddproduct() {
     this.router.navigate(['/add-product'])
-    this.isOpen = false;
+    this.closeMenu()
   }
 
   gotousersmanagement() {
     this.router.navigate(['/users-management'])
-    this.isOpen = false;
+    this.closeMenu()
   }
 
   gotouserstatistics() {
     this.router.navigate(['/user-statistics'])
-    this.isOpen = false;
+    this.closeMenu()
   }
 
   gotoproductstatistics() {
     this.router.navigate(['/product-statistics'])
-    this.isOpen = false;
+    this.closeMenu()
   }
 
   gotorevenuestatistics() {
     this.router.navigate(['/revenue-statistics'])
-    this.isOpen = false;
+    this.closeMenu()
   }
 
   gotoorder() {
     this.router.navigate(['/admin-order'])
-    this.isOpen = false;
+    this.closeMenu()
   }
 
   gototransaction() {
     this.router.navigate(['/transaction-management'])
-    this.isOpen = false;
+    this.closeMenu()
+  }
+
+  gotobrand() {
+    this.router.navigate(['/brand-management'])
+    this.closeMenu()
   }
 
   search() {

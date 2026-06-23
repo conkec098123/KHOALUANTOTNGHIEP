@@ -1,0 +1,78 @@
+<div class="d-flex justify-content-between mb-3">
+  <h3>Quản lý thương hiệu</h3>
+
+  <button
+    class="btn btn-primary"
+    data-bs-toggle="modal"
+    data-bs-target="#brandModal"
+    (click)="openAdd()">
+    Thêm thương hiệu
+  </button>
+</div>
+<table class="table table-bordered">
+    <thead>
+        <tr>
+            <th>Name</th>
+            <th>Active</th>
+            
+        </tr>
+    </thead>
+
+    <tbody>
+        @for (brand of brands(); track brand.brand_id) {
+        <tr>
+
+            <td>{{ brand.name }}</td>
+
+            <td>
+                {{ brand.is_active ? 'Hoạt động' : 'Đã khóa' }}
+            </td>
+
+            <td>
+                <button class="btn btn-warning" (click)="toggleActive(brand)" [disabled]="loading()">
+
+                    {{ brand.is_active ? 'Khóa' : 'Mở khóa' }}
+
+                </button>
+                <button
+      class="btn btn-info ms-3"
+      (click)="openEdit(brand)">
+      Sửa
+    </button>
+            </td>
+        </tr>
+        }
+    </tbody>
+</table>
+<div class="modal-backdrop" *ngIf="showModal">
+
+  <div class="modal-content">
+
+    <h4>
+      {{ isEdit ? 'Sửa thương hiệu' : 'Thêm thương hiệu' }}
+    </h4>
+
+    <input
+      class="form-control mb-3"
+      [(ngModel)]="name"
+      placeholder="Tên thương hiệu">
+
+    <div class="d-flex justify-content-end gap-2">
+
+      <button
+        class="btn btn-secondary"
+        (click)="closeModal()">
+        Hủy
+      </button>
+
+      <button
+        class="btn btn-primary"
+        (click)="save()">
+        {{ isEdit ? 'Lưu' : 'Thêm' }}
+      </button>
+
+    </div>
+
+  </div>
+
+</div>

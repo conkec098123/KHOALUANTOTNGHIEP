@@ -1943,11 +1943,11 @@ def statistics_revenue():
 
     cursor.execute("""
         SELECT
-            MONTH(order_date) AS month,
+            MONTH(created_at) AS month,
             SUM(total_price) AS revenue
         FROM Orders
-        WHERE order_status = N'delivered' AND YEAR(order_date) = ?
-        GROUP BY MONTH(order_date)
+        WHERE order_status = N'delivered' AND YEAR(created_at) = ?
+        GROUP BY MONTH(created_at)
         ORDER BY month
     """, (year,))
 
@@ -1959,6 +1959,44 @@ def statistics_revenue():
         data.append({
             "month": r.month,
             "revenue": float(r.revenue)
+        })
+
+    conn.close()
+
+    return jsonify(data)
+
+@app.route("/api/statistics/orders")
+def statistics_orders():
+
+    year = request.args.get("year")
+
+    conn = pyodbc.connect(
+        'DRIVER={SQL Server};'
+        f'SERVER={server};'
+        f'DATABASE={database};'
+        'Trusted_Connection=yes;'
+    )
+
+    cursor = conn.cursor()
+
+    cursor.execute("""
+        SELECT
+            MONTH(created_at) AS month,
+            COUNT(*) AS count
+        FROM Orders
+        WHERE YEAR(created_at) = ?
+        GROUP BY MONTH(created_at)
+        ORDER BY month
+    """, (year,))
+
+    rows = cursor.fetchall()
+
+    data = []
+
+    for r in rows:
+        data.append({
+            "month": r.month,
+            "count": r.count
         })
 
     conn.close()
@@ -1983,11 +2021,11 @@ def get_admin_orders():
             c.full_name,
             o.total_price,
             o.order_status,
-            o.order_date
+            o.created_at
         FROM Orders o
         LEFT JOIN Customer c
             ON o.customer_id = c.customer_id
-        ORDER BY o.order_date DESC
+        ORDER BY o.created_at DESC
     """)
 
     rows = cursor.fetchall()
@@ -2000,7 +2038,7 @@ def get_admin_orders():
             "full_name": row.full_name,
             "total_price": float(row.total_price),
             "order_status": row.order_status,
-            "order_date": row.order_date
+            "order_date": row.created_at
         })
 
     conn.close()
@@ -2008,6 +2046,198 @@ def get_admin_orders():
     print(orders)
 
     return jsonify(orders)
+
+@app.route("/api/admin/orders/<int:order_id>", methods=["PUT"])
+def update_order_status(order_id):
+
+    data = request.get_json()
+    status = data.get("order_status")
+
+    conn = pyodbc.connect(
+        'DRIVER={SQL Server};'
+        f'SERVER={server};'
+        f'DATABASE={database};'
+        'Trusted_Connection=yes;'
+    )
+    cursor = conn.cursor()
+
+    cursor.execute("""
+        UPDATE Orders
+        SET order_status = ?
+        WHERE order_id = ?
+    """, (status, order_id))
+
+    conn.commit()
+    conn.close()
+
+    return jsonify({"message": "Cập nhật thành công"})
+
+@app.route("/api/brand")
+def api_brand():
+    conn = pyodbc.connect(
+    'DRIVER={SQL Server};'
+    f'SERVER={server};'
+    f'DATABASE={database};'
+    'Trusted_Connection=yes;')
+    cursor = conn.cursor()
+    cursor.execute("""
+        SELECT brand_id, name, is_active
+        FROM Brand
+    """)
+
+    rows = cursor.fetchall()
+
+    brand = []
+
+    for r in rows:
+        brand.append({
+            "brand_id": r.brand_id,
+            "name": r.name,
+            "is_active": bool(r.is_active),
+        })
+
+    conn.close()
+
+    return jsonify(brand)
+
+@app.route("/api/brands/<int:id>/active", methods=["PUT"])
+def update_brand_active(id):
+
+    data = request.get_json()
+
+    conn = pyodbc.connect(
+        'DRIVER={SQL Server};'
+        f'SERVER={server};'
+        f'DATABASE={database};'
+        'Trusted_Connection=yes;'
+    )
+
+    cursor = conn.cursor()
+
+    cursor.execute("""
+        UPDATE Brand
+        SET is_active = ?
+        WHERE brand_id = ?
+    """, (data["is_active"], id))
+
+    conn.commit()
+    conn.close()
+
+    return jsonify({
+        "message": "Cập nhật thành công"
+    })
+
+@app.route("/api/brands/<int:id>", methods=["PUT"])
+def update_brand(id):
+
+    data = request.get_json()
+
+    conn = pyodbc.connect(
+        'DRIVER={SQL Server};'
+        f'SERVER={server};'
+        f'DATABASE={database};'
+        'Trusted_Connection=yes;'
+    )
+
+    cursor = conn.cursor()
+
+    cursor.execute("""
+        UPDATE Brand
+        SET name = ?
+        WHERE brand_id = ?
+    """, (data["name"], id))
+
+    conn.commit()
+    conn.close()
+
+    return jsonify({
+        "message": "Cập nhật thành công"
+    })
+
+@app.route("/api/brands", methods=["POST"])
+def add_brand():
+
+    data = request.get_json()
+    name = data.get("name")
+
+    conn = pyodbc.connect(
+        'DRIVER={SQL Server};'
+        f'SERVER={server};'
+        f'DATABASE={database};'
+        'Trusted_Connection=yes;'
+    )
+
+    cursor = conn.cursor()
+
+    cursor.execute(
+        "SELECT 1 FROM Brand WHERE name = ?",
+        (name,)
+    )
+
+    if cursor.fetchone():
+        conn.close()
+        return jsonify({
+            "message": "Thương hiệu đã tồn tại"
+        }), 400
+
+    cursor.execute("""
+        INSERT INTO Brand (name)
+        VALUES (?)
+    """, (name,))
+
+    conn.commit()
+    conn.close()
+
+    return jsonify({
+        "message": "Thêm thành công"
+    })
+
+@app.route("/api/products/top")
+def top_products():
+
+    conn = pyodbc.connect(
+        'DRIVER={SQL Server};'
+        f'SERVER={server};'
+        f'DATABASE={database};'
+        'Trusted_Connection=yes;'
+    )
+
+    cursor = conn.cursor()
+
+    cursor.execute("""
+        SELECT TOP 5
+            p.product_id,
+            p.name,
+            p.image,
+            SUM(od.qty) AS sold
+        FROM Product p
+        JOIN OrderDetail od
+            ON p.product_id = od.product_id
+        JOIN Orders o
+            ON od.order_id = o.order_id
+        WHERE o.order_status = N'delivered'
+        GROUP BY
+            p.product_id,
+            p.name,
+            p.image
+        ORDER BY sold DESC
+    """)
+
+    rows = cursor.fetchall()
+
+    data = []
+
+    for r in rows:
+        data.append({
+            "product_id": r.product_id,
+            "name": r.name,
+            "image": r.image,
+            "sold": r.sold
+        })
+
+    conn.close()
+
+    return jsonify(data)
 
 if __name__ == "__main__":
     app.run(host='localhost', port=5000, debug=True, use_reloader=False, threaded=True) 

@@ -23,6 +23,10 @@ import { ProductStatistics } from './template/product-statistics/product-statist
 import { RevenueStatistics } from './template/revenue-statistics/revenue-statistics';
 import { AdminOrder } from './template/admin-order/admin-order';
 import { TransactionManagement } from './template/transaction-management/transaction-management';
+import { BrandManagement } from './template/brand-management/brand-management';
+import { AdminHome } from './template/admin-home/admin-home';
+import { ProductByMenu } from './template/product-by-menu/product-by-menu';
+import { Checkout } from './template/checkout/checkout';
 
 
 export const routes: Routes = [
@@ -122,5 +126,21 @@ export const routes: Routes = [
     {
         path:"transaction-management",
         component:TransactionManagement
+    },
+    {
+        path:"brand-management",
+        component:BrandManagement
+    },
+    {
+        path:"admin-home",
+        component:AdminHome
+    },
+    {
+        path: 'products/menu/:id',
+        component: ProductByMenu
+    },
+    {
+        path: 'checkout',
+        component: Checkout
     },
 ];

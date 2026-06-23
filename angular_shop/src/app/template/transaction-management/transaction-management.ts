@@ -25,12 +25,14 @@ export class TransactionManagement {
       `${environment.apiUrl}/api/admin/orders`
     ).subscribe(data => {
 
-      const pending = data.filter(
-        x => x.order_status === 'pending'
+      const transactions = data.filter(
+        x =>
+          x.order_status === 'pending' ||
+          x.order_status === 'shipping'
       );
 
-      this.orders.set(pending);
-      this.filteredOrders.set(pending);
+      this.orders.set(transactions);
+      this.filteredOrders.set(transactions);
     });
   }
 
@@ -45,6 +47,14 @@ export class TransactionManagement {
           .includes(this.search)
       );
     }
+    this.filteredOrders.set(data);
+
+    if (this.status) {
+      data = data.filter(x =>
+        x.order_status === this.status
+      );
+    }
+
     this.filteredOrders.set(data);
   }
 

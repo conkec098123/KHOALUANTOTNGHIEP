@@ -1,0 +1,113 @@
+<div class="dashboard">
+
+  <!-- LEFT 50% -->
+  <div class="left">
+
+    <div class="card">
+      <h4>Doanh thu</h4>
+      <h2>{{ currentRevenue() | number }}đ</h2>
+      <p>
+  {{ revenueGrowth() > 0 ? '↑' : '↓' }}
+  {{ revenueGrowth() | number:'1.0-1' }}%
+  so với tháng trước
+</p>
+    </div>
+
+    <div class="card">
+      <h4>Đơn hàng</h4>
+      <h2>{{ currentOrders() }}</h2>
+      <p>
+  {{ orderGrowth() > 0 ? '↑' : '↓' }}
+  {{ orderGrowth() | number:'1.0-1' }}%
+  so với tháng trước
+</p>
+    </div>
+
+    <div class="card">
+      <h4>Khách hàng</h4>
+      <h2>{{ currentUsers() }}</h2>
+      <p>
+  {{ userGrowth() > 0 ? '↑' : '↓' }}
+  {{ userGrowth() | number:'1.0-1' }}%
+  so với tháng trước
+</p>
+    </div>
+
+  </div>
+
+  <!-- RIGHT 50% -->
+  <div class="right">
+
+    <!-- TOP RIGHT -->
+    <div class="card">
+
+  <div class="card-header">
+    <h4>Đơn cần xử lý ({{ pendingOrders() }})</h4>
+
+    <button class="btn-link" (click)="goToOrders()">
+      Xem tất cả →
+    </button>
+  </div>
+
+  <div class="scroll-box">
+
+    <table class="mini-table">
+
+      <tr>
+        <th>Mã</th>
+        <th>Khách</th>
+        <th>Trạng thái</th>
+      </tr>
+
+      @for (order of orders(); track order.order_id) {
+        @if (order.order_status === 'pending') {
+          <tr>
+            <td>{{ order.order_id }}</td>
+            <td>{{ order.full_name }}</td>
+            <td>{{ order.order_status }}</td>
+          </tr>
+        }
+      }
+
+    </table>
+
+  </div>
+
+</div>
+
+    <!-- BOTTOM RIGHT -->
+    <div class="card">
+
+  <div class="card-header">
+    <h4>Sản phẩm nổi bật</h4>
+  </div>
+
+  <div class="product-list">
+
+    @for (item of topProducts(); track item.product_id) {
+
+      <div class="product-item">
+
+        <img [src]="item.image" class="product-img">
+
+        <div class="product-info">
+
+          <p class="name">{{ item.name }}</p>
+
+          <span class="sold">
+            Đã bán: {{ item.sold }}
+          </span>
+
+        </div>
+
+      </div>
+
+    }
+
+  </div>
+
+</div>
+
+  </div>
+
+</div>

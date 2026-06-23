@@ -16,7 +16,7 @@
           <!-- nếu chưa login -->
           <a *ngIf="!cartService.user()" class="nav-link mt-2" routerLink="login">Login</a>
 
-          <div *ngIf="cartService.user()" class="dropdown">
+          <div *ngIf="cartService.user()?.role === 'customer'" class="dropdown">
             <button class="btn btn-light" (click)="toggleDropdown()">
               <div class="d-flex align-items-center me-3">
 
@@ -45,10 +45,51 @@
               <li *ngIf="cartService.user()?.role === 'admin'">
                 <a class="dropdown-item" (click)="gotoaddproduct()">Thêm sản phẩm</a>
               </li>
-              <li *ngIf="cartService.user()?.role === 'admin'">
-                <a class="dropdown-item" (click)="gotousersmanagement()">Quản lý người dùng</a>
+              <li>
+                <a class="dropdown-item" (click)="logout()">Đăng xuất</a>
+              </li>
+            </ul>
+          </div>
+
+          <li class="nav-item" *ngIf="cartService.user()?.role === 'admin'">
+          <a class="nav-link active" routerLink="/admin-home">Home</a>
+        </li>
+
+        
+        <li class="nav-item dropdown position-relative" *ngIf="cartService.user()?.role === 'admin'">
+          <button class="btn btn-light" (click)="toggleMenu('product')">
+            Sản phẩm
+          </button>
+          <ul *ngIf="openMenu === 'product'" class="dropdown-menu show">
+            <li *ngIf="cartService.user()?.role === 'admin'">
+                <a class="dropdown-item" (click)="gotoaddproduct()">Thêm sản phẩm</a>
+              </li>
+              <li class="nav-item" *ngIf="cartService.user()?.role === 'admin'">
+          <a class="nav-link active mt-2" routerLink="/admin">Quản lý sản phẩm</a>
+        </li>
+          </ul>
+          </li>
+
+          <li class="nav-item dropdown position-relative" *ngIf="cartService.user()?.role === 'admin'">
+          <button class="btn btn-light" (click)="toggleMenu('order')">
+            Đơn hàng
+          </button>
+          <ul *ngIf="openMenu === 'order'" class="dropdown-menu show">
+            <li *ngIf="cartService.user()?.role === 'admin'">
+                <a class="dropdown-item" (click)="gotoorder()">Quản lý đơn hàng</a>
               </li>
               <li *ngIf="cartService.user()?.role === 'admin'">
+                <a class="dropdown-item" (click)="gototransaction()">Quản lý giao dịch</a>
+              </li>
+          </ul>
+          </li>
+
+          <li class="nav-item dropdown position-relative" *ngIf="cartService.user()?.role === 'admin'">
+          <button class="btn btn-light" (click)="toggleMenu('statistics')">
+            Thống kê
+          </button>
+          <ul *ngIf="openMenu === 'statistics'" class="dropdown-menu show">
+            <li *ngIf="cartService.user()?.role === 'admin'">
                 <a class="dropdown-item" (click)="gotouserstatistics()">Thống kê người dùng</a>
               </li>
               <li *ngIf="cartService.user()?.role === 'admin'">
@@ -57,17 +98,25 @@
               <li *ngIf="cartService.user()?.role === 'admin'">
                 <a class="dropdown-item" (click)="gotorevenuestatistics()">Thống kê doanh thu</a>
               </li>
-              <li *ngIf="cartService.user()?.role === 'admin'">
-                <a class="dropdown-item" (click)="gotoorder()">Quản lý đơn hàng</a>
+          </ul>
+          </li>
+
+          <li class="nav-item dropdown position-relative" *ngIf="cartService.user()?.role === 'admin'">
+          <button class="btn btn-light" (click)="toggleMenu('other')">
+            quản lý khác
+          </button>
+          <ul *ngIf="openMenu === 'other'" class="dropdown-menu show">
+            <li *ngIf="cartService.user()?.role === 'admin'">
+                <a class="dropdown-item" (click)="gotousersmanagement()">Quản lý người dùng</a>
               </li>
-              <li *ngIf="cartService.user()?.role === 'admin'">
-                <a class="dropdown-item" (click)="gototransaction()">Quản lý giao dịch</a>
+            <li *ngIf="cartService.user()?.role === 'admin'">
+                <a class="dropdown-item" (click)="gotobrand()">Quản lý thương hiệu</a>
               </li>
-              <li>
-                <a class="dropdown-item" (click)="logout()">Đăng xuất</a>
+          </ul>
+          </li>
+          <li class="nav-item" *ngIf="cartService.user()?.role === 'admin'">
+                <a class="nav-link active" style="cursor: pointer;" (click)="logout()">Đăng xuất</a>
               </li>
-            </ul>
-          </div>
 
         </div>
         <li class="nav-item" *ngIf="cartService.user()?.role === 'customer'">
@@ -76,10 +125,10 @@
         <li class="nav-item" *ngIf="!cartService.user()">
           <a class="nav-link active mt-2" routerLink="/">Home</a>
         </li>
-        <li class="nav-item" *ngIf="cartService.user()?.role === 'admin'">
-          <a class="nav-link active mt-2" routerLink="/admin">Home</a>
+        <li class="nav-item" *ngIf="cartService.user()?.role === 'customer'">
+          <a class="nav-link mt-2" routerLink="cart">cart</a>
         </li>
-        <li class="nav-item">
+        <li class="nav-item" *ngIf="!cartService.user()">
           <a class="nav-link mt-2" routerLink="cart">cart</a>
         </li>
       </ul>
