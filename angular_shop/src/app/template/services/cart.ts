@@ -29,9 +29,8 @@ export class CartService {
       qty: 1
     };
 
-    console.log("isLoggedIn:", this.isLoggedIn);
-    console.log(item);
     console.log(product);
+    console.log(item);
 
     if (this.isLoggedIn) {
 
@@ -123,10 +122,14 @@ export class CartService {
   getTotal() {
     return this.cart().reduce((sum, item) => {
 
+      console.log(item);
+
       const price = Number(item.discount_price ?? item.price ?? 0);
       const qty = Number(item.qty ?? 0);
 
       if (isNaN(price) || isNaN(qty)) return sum;
+
+      console.log(price, qty);
 
       return sum + price * qty;
     }, 0);
@@ -151,6 +154,7 @@ export class CartService {
   }
 
   saveCart() {
+    console.log(this.cart());
     localStorage.setItem('cart', JSON.stringify(this.cart()));
   }
 }

@@ -65,6 +65,10 @@ export class Cart {
     this.router.navigate(['/address']);
   }
 
+  gotocheckout() {
+    this.router.navigate(['/checkout']);
+  }
+
   loadAddress() {
 
     if (!this.cartService.isLoggedIn) return;

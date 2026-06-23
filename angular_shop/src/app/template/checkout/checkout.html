@@ -1,1 +1,69 @@
-<p>checkout works!</p>
+<h3>Thanh toán</h3>
+
+@for (item of cartService.cart(); track item.product_id) {
+
+<div class="border rounded p-3 mb-2">
+
+  <div class="fw-bold">
+    {{ item.name }}
+  </div>
+
+  <div>
+    Số lượng: {{ item.qty }}
+  </div>
+
+  <div>
+    Giá:
+    {{ item.discount_price | number }}
+    đ
+  </div>
+
+</div>
+
+}
+
+<h5>
+  Tổng:
+  {{ cartService.getTotal() | number }}
+  đ
+</h5>
+
+<div class="border rounded p-3 shadow-sm"
+       style="max-height:250px; overflow-y:auto;">
+
+    <h5 class="mb-3">Địa chỉ</h5>
+
+    @for (address of addresses(); track address.address_id) {
+
+      <div class="form-check border-bottom py-2">
+
+        <input
+          class="form-check-input"
+          type="radio"
+          name="address"
+          [value]="address.address_id">
+
+        <label class="form-check-label w-100">
+
+          <div class="fw-bold">
+            {{ address.receiver_name }}
+          </div>
+
+          <div>
+            {{ address.phone_number }}
+          </div>
+
+          <small class="text-muted">
+            {{ address.address }}
+          </small>
+
+        </label>
+
+      </div>
+    }
+
+    <button class="btn btn-outline-primary w-100 mt-3" (click)="gotoaddress()">
+      + Thêm địa chỉ
+    </button>
+
+  </div>
