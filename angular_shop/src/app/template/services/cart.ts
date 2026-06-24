@@ -8,7 +8,7 @@ import { of } from 'rxjs';
 })
 export class CartService {
 
-  constructor(private http: HttpClient) { }
+  constructor(private http: HttpClient) {}
 
   get isLoggedIn() {
     return this.user() !== null;
@@ -124,14 +124,14 @@ export class CartService {
 
       console.log(item);
 
-      const price = Number(item.discount_price ?? item.price ?? 0);
-      const qty = Number(item.qty ?? 0);
+      const finalPrice =
+        Number(item.discount_price) > 0
+          ? Number(item.discount_price)
+          : Number(item.price || 0);
 
-      if (isNaN(price) || isNaN(qty)) return sum;
+      const qty = Number(item.qty || 0);
 
-      console.log(price, qty);
-
-      return sum + price * qty;
+      return sum + finalPrice * qty;
     }, 0);
   }
 

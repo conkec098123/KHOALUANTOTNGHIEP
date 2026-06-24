@@ -1,69 +1,124 @@
-<h3>Thanh toán</h3>
+<div class="container mt-3">
+  <div class="row">
 
-@for (item of cartService.cart(); track item.product_id) {
+    <!-- LEFT: FORM -->
+    <div class="col-md-8">
 
-<div class="border rounded p-3 mb-2">
+      <h3>Thanh toán</h3>
 
-  <div class="fw-bold">
-    {{ item.name }}
-  </div>
+      <!-- ===== DELIVERY METHOD ===== -->
+      <div class="card p-3 mb-3">
+        <h5>Hình thức nhận hàng</h5>
 
-  <div>
-    Số lượng: {{ item.qty }}
-  </div>
-
-  <div>
-    Giá:
-    {{ item.discount_price | number }}
-    đ
-  </div>
-
+<div class="form-check">
+  <input type="radio" name="delivery" value="ship">
+  <label>Giao tận nơi</label>
 </div>
 
-}
+<div class="form-check">
+  <input type="radio" name="delivery" value="store">
+  <label>
+    Nhận tại cửa hàng  
+    <div class="text-muted">
+      Laptop Store - 123 quanturn
+    </div>
+  </label>
+</div>
+      </div>
 
-<h5>
-  Tổng:
-  {{ cartService.getTotal() | number }}
-  đ
-</h5>
+      <!-- ===== ADDRESS / STORE ===== -->
+      <div class="card p-3 mb-3">
+        <h5>Thông tin nhận hàng</h5>
 
-<div class="border rounded p-3 shadow-sm"
-       style="max-height:250px; overflow-y:auto;">
+        <!-- Giao tận nơi -->
+        <div>
+          <h6>Địa chỉ giao hàng</h6>
 
-    <h5 class="mb-3">Địa chỉ</h5>
+          @for (address of addresses(); track address.address_id) {
+            <div class="form-check border-bottom py-2">
+              <input
+                class="form-check-input"
+                type="radio"
+                name="address"
+                [value]="address.address_id">
 
-    @for (address of addresses(); track address.address_id) {
+              <label class="form-check-label w-100">
+                <div class="fw-bold">{{ address.receiver_name }}</div>
+                <div>{{ address.phone_number }}</div>
+                <small class="text-muted">{{ address.address }}</small>
+              </label>
+            </div>
+          }
 
-      <div class="form-check border-bottom py-2">
+          <button class="btn btn-outline-primary w-100 mt-3" (click)="gotoaddress()">
+            + Thêm địa chỉ
+          </button>
+        </div>
+      </div>
 
-        <input
-          class="form-check-input"
-          type="radio"
-          name="address"
-          [value]="address.address_id">
+      <!-- ===== NOTE ===== -->
+      <div class="card p-3 mb-3">
+        <h5>Ghi chú đơn hàng</h5>
+        <textarea class="form-control" rows="3"
+          placeholder="Ví dụ: giao giờ hành chính, gọi trước khi giao..."></textarea>
+      </div>
 
-        <label class="form-check-label w-100">
+      <!-- ===== PAYMENT ===== -->
+      <div class="card p-3 mb-3">
+        <h5>Phương thức thanh toán</h5>
 
-          <div class="fw-bold">
-            {{ address.receiver_name }}
+        <div class="form-check">
+          <input type="radio" class="form-check-input" name="payment" value="cod" [(ngModel)]="paymentMethod">
+          <label>Thanh toán khi nhận hàng (COD)</label>
+        </div>
+
+        <div class="form-check">
+          <input type="radio" class="form-check-input" name="payment" value="vnpay" [(ngModel)]="paymentMethod">
+          <label>VNPay</label>
+        </div>
+      </div>
+
+      <!-- ===== INVOICE OPTION ===== -->
+      <div class="card p-3 mb-3">
+        <h5>Hóa đơn</h5>
+
+        <div class="form-check">
+          <input type="checkbox" class="form-check-input">
+          <label>Xuất hóa đơn VAT</label>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- RIGHT: SUMMARY -->
+    <div class="col-md-4">
+
+      <div class="card p-3 shadow-sm">
+
+        <h5>Tóm tắt đơn hàng</h5>
+
+        @for (item of cartService.cart(); track item.product_id) {
+          <div class="border-bottom py-2">
+            <div class="fw-bold">{{ item.name }}</div>
+            <div>Số lượng: {{ item.qty }}</div>
+            <div>Giá: {{ item.price | number }} đ</div>
           </div>
+        }
 
-          <div>
-            {{ address.phone_number }}
-          </div>
+        <hr>
 
-          <small class="text-muted">
-            {{ address.address }}
-          </small>
+        <h5>
+          Tổng:
+          {{ cartService.getTotal() | number }} đ
+        </h5>
 
-        </label>
+        <button class="btn btn-success w-100 mt-3" (click)="checkout()">
+          ĐẶT HÀNG
+        </button>
 
       </div>
-    }
 
-    <button class="btn btn-outline-primary w-100 mt-3" (click)="gotoaddress()">
-      + Thêm địa chỉ
-    </button>
+    </div>
 
   </div>
+</div>

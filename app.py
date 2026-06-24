@@ -286,7 +286,13 @@ def get_cart():
     cursor = conn.cursor()
 
     cursor.execute("""
-        SELECT p.product_id, p.name, p.price, cd.qty
+        SELECT
+            p.product_id,
+            p.name,
+            p.price,
+            p.discount_price,
+            cd.qty,
+            p.image
         FROM Cart c
         JOIN CartDetail cd ON c.cart_id = cd.cart_id
         JOIN Product p ON cd.product_id = p.product_id
@@ -301,7 +307,9 @@ def get_cart():
             "product_id": item[0],
             "name": item[1],
             "price": item[2],
-            "qty": item[3]
+            "discount_price": item[3],
+            "qty": item[4],
+            "image": item[5]
         })
 
     conn.close()
@@ -645,6 +653,7 @@ def create_order():
     customer_id = session.get("customer_id")
     cart = data.get("cart")
     total = data.get("total")
+    address_id = data.get("address_id")
 
     print("RECEIVED:", data)
     print("CART:", cart)
@@ -661,10 +670,19 @@ def create_order():
     cursor = conn.cursor()
 
     cursor.execute("""
-        INSERT INTO Orders (customer_id, total_price, order_status)
+        INSERT INTO Orders (
+            customer_id,
+            address_id,
+            total_price,
+            order_status
+        )
         OUTPUT INSERTED.order_id
-        VALUES (?, ?, 'pending')
-    """, (customer_id, total))
+        VALUES (?, ?, ?, 'pending')
+    """, (
+        customer_id,
+        address_id,
+        total
+    ))
 
     order_id = cursor.fetchone()[0]
 

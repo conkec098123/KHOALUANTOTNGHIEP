@@ -22,6 +22,8 @@ export class Cart {
 
   ngOnInit() {
 
+    console.log(this.cartService.cart());
+
     this.loadAddress();
 
   }
