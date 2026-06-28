@@ -59,6 +59,11 @@ export class Cart {
           amount: total
         }).subscribe((res: any) => {
           window.location.href = res.payment_url;
+          next: () => {
+
+  this.cartService.cart.set([]);
+
+}
         });
       });
   }
@@ -68,6 +73,13 @@ export class Cart {
   }
 
   gotocheckout() {
+    if (!this.cartService.user()) {
+
+      alert("Bạn chưa đăng nhập đâu");
+    this.router.navigate(['/login']);
+    return;
+
+  }
     this.router.navigate(['/checkout']);
   }
 

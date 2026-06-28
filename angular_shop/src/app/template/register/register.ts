@@ -14,6 +14,7 @@ import { CommonModule } from '@angular/common';
 export class Register {
 
   username = '';
+  email = '';
   password = '';
   repassword = '';
 
@@ -24,6 +25,7 @@ export class Register {
   register() {
     this.http.post(`${environment.apiUrl}/api/register`, {
       username: this.username,
+      email: this.email,
       password: this.password,
       repassword: this.repassword
     }).subscribe({

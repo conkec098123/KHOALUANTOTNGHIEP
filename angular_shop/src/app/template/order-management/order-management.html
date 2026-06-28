@@ -1,28 +1,23 @@
 <div class="dropdown">
   <button class="btn btn-light" (click)="toggleDropdown()">
     <div class="d-flex align-items-center me-3">
-      <span>Click</span>
+      <span>Lọc</span>
     </div>
 
   </button>
 
-  <ul *ngIf="isOpen" class="dropdown-menu show">
-    <li>
-      <a class="dropdown-item">Tất cả</a>
-    </li>
-    <li>
-      <a class="dropdown-item">Đơn đợi xác nhận</a>
-    </li>
-    <li>
-      <a class="dropdown-item">Đơn đang giao</a>
-    </li>
-    <li>
-      <a class="dropdown-item">Đơn đã giao</a>
-    </li>
-    <li>
-      <a class="dropdown-item text-danger">Đơn đã hủy</a>
-    </li>
-  </ul>
+  <select
+    [(ngModel)]="status"
+    (change)="filterOrders()">
+
+    <option value="">Tất cả</option>
+    <option value="pending">Chưa thanh toán</option>
+    <option value="paid">Đã thanh toán</option>
+    <option value="shipping">Đang giao</option>
+    <option value="delivered">Đã giao</option>
+    <option value="cancelled">Đã hủy</option>
+
+  </select>
   @for (order of orders(); track order.order_id) {
 
 <div class="card mb-3 shadow-sm" (click)="gotoOrderDetail(order.order_id)"

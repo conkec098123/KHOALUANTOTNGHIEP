@@ -16,6 +16,7 @@ export class OrderManagement {
   constructor( private http: HttpClient, private router: Router ){}
 
   isOpen = false;
+  status = '';
 
   toggleDropdown(){
     this.isOpen = !this.isOpen
@@ -28,6 +29,7 @@ export class OrderManagement {
 }
 
   orders = signal<any[]>([]);
+  allOrders = signal<any[]>([]);
 
 ngOnInit() {
 
@@ -38,8 +40,33 @@ ngOnInit() {
   ).subscribe(res => {
 
     this.orders.set(res);
+    this.allOrders.set(res); 
 
   });
 
+  // this.loadOrders();
+
 }
+
+filterOrders() {
+
+    let data = this.allOrders();
+
+    if (this.status) {
+      data = data.filter(x =>
+        x.order_status === this.status
+      );
+    }
+    this.orders.set(data);
+  }
+
+  loadOrders() {
+    this.http.get<any[]>(
+      `${environment.apiUrl}/api/admin/orders`
+    ).subscribe(data => {
+      console.log(data);
+      this.orders.set(data);
+      this.orders.set(data);
+    });
+  }
 }

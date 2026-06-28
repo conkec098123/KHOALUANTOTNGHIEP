@@ -13,32 +13,53 @@ export class OrderDetail {
 
 
   details = signal<any[]>([]);
+  order = signal<any>(null);
 
-constructor(
-  private http: HttpClient,
-  private route: ActivatedRoute,
-  private router: Router
-) {}
+  constructor(
+    private http: HttpClient,
+    private route: ActivatedRoute,
+    private router: Router
+  ) { }
 
-goToReview(order_detail_id: number) {
+  goToReview(order_detail_id: number) {
 
-  this.router.navigate(
-    ['/review', order_detail_id]
-  );
+    this.router.navigate(
+      ['/review', order_detail_id]
+    );
 
-}
+  }
 
-ngOnInit() {
+  ngOnInit() {
+
+    const order_id = this.route.snapshot.paramMap.get('id');
+
+    this.http.get<any>(
+      `${environment.apiUrl}/api/order-detail/${order_id}`
+    )
+      .subscribe(res => {
+
+        this.order.set(res.order);
+        this.details.set(res.details);
+
+      });
+  }
+
+  cancelOrder() {
 
   const order_id = this.route.snapshot.paramMap.get('id');
 
-  this.http.get<any[]>(
-    `${environment.apiUrl}/api/order-detail/${order_id}`,
+  this.http.put(
+    `${environment.apiUrl}/api/order/cancel/${order_id}`,
+    {},
     { withCredentials: true }
+  )
+  .subscribe(() => {
 
-  ).subscribe(res => {
-
-    this.details.set(res);
+    this.order.update(order => ({
+      ...order,
+      order_status: 'cancelled'
+    }));
+     window.location.reload();
 
   });
 

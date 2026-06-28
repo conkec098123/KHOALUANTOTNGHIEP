@@ -21,8 +21,8 @@ CORS(app, supports_credentials=True, origins=["http://localhost:4200"])
 app.config['SESSION_COOKIE_SAMESITE'] = 'Lax'
 app.config['SESSION_COOKIE_SECURE'] = False
 
-vnp_TmnCode = "E6SARN01"
-vnp_HashSecret = "81Y9ZNK7EFQ8V7SIM613H6A1QCS3ODJE"
+vnp_TmnCode = "4MTCKD9K"
+vnp_HashSecret = "OTCSZY7N48EPXBMGNBEKAGVAHYDRA7IR"
 vnp_Url = "https://sandbox.vnpayment.vn/paymentv2/vpcpay.html"
 vnp_ReturnUrl = "http://localhost:4200/payment-success"
 
@@ -134,10 +134,11 @@ def register():
     data = request.get_json()
 
     username = data.get("username")
+    email = data.get("email")
     password = data.get("password")
     repassword = data.get("repassword")
 
-    if not username or not password:
+    if not username or not password or not email:
         return jsonify({"error": "Thiếu dữ liệu"}), 400
 
     if password != repassword:
@@ -152,15 +153,15 @@ def register():
     cursor = conn.cursor()
 
     # check user tồn tại
-    cursor.execute("SELECT 1 FROM Customer WHERE full_name = ?", (username,))
+    cursor.execute("SELECT 1 FROM Customer WHERE email = ?", (email,))
     if cursor.fetchone():
         conn.close()
-        return jsonify({"error": "Username đã tồn tại"}), 400
+        return jsonify({"error": "Email đã tồn tại"}), 400
 
     cursor.execute("""
-        INSERT INTO Customer (full_name, password)
-        VALUES (?, ?)
-    """, (username, password))
+        INSERT INTO Customer (full_name, password, email)
+        VALUES (?, ?, ?)
+    """, (username, password, email))
 
     conn.commit()
     conn.close()
@@ -179,18 +180,18 @@ def login():
 
     data = request.get_json()
 
-    username = data["username"].strip()
+    email = data["email"].strip()
     password = data["password"].strip()
 
-    print("USERNAME:", username)
+    print("USERNAME:", email)
     print("PASSWORD:", password)
 
     # 🔥 1. CHECK ADMIN
     cursor.execute("""
-        SELECT user_id, username
+        SELECT user_id, email
         FROM [User]
-        WHERE username = ? AND password = ?
-    """, (username, password))
+        WHERE email = ? AND password = ?
+    """, (email, password))
 
     admin = cursor.fetchone()
     print("ADMIN FOUND:", admin)
@@ -206,10 +207,10 @@ def login():
         })
 
     cursor.execute("""
-        SELECT customer_id, full_name, avatar, active
+        SELECT customer_id, email, avatar, active
         FROM Customer
-        WHERE full_name = ? AND password = ?
-    """, (username, password))
+        WHERE email = ? AND password = ?
+    """, (email, password))
 
     customer = cursor.fetchone()
 
@@ -670,17 +671,32 @@ def create_order():
     cursor = conn.cursor()
 
     cursor.execute("""
+        SELECT phone_number, address
+        FROM Address
+        WHERE address_id = ?
+    """, (address_id,))
+
+    addr = cursor.fetchone()
+
+    phone_number = addr.phone_number
+    address_text = addr.address
+
+    cursor.execute("""
         INSERT INTO Orders (
             customer_id,
             address_id,
+            phone_number,
+            address,
             total_price,
             order_status
-        )
+                )
         OUTPUT INSERTED.order_id
-        VALUES (?, ?, ?, 'pending')
+        VALUES (?, ?, ?, ?, ?, 'pending')
     """, (
         customer_id,
         address_id,
+        phone_number,
+        address_text,
         total
     ))
 
@@ -786,6 +802,8 @@ def create_payment():
 
     payment_url = f"{vnp_Url}?{query_string}&vnp_SecureHash={secure_hash}"
 
+    print("payment_url:", payment_url)
+
     print("PARAMS:", vnp_Params)
     print("QUERY:", query_string)
     print("HASH STRING:", hash_data)
@@ -808,52 +826,22 @@ def create_signature(params, secret):
 
 @app.route("/api/payment-success", methods=["POST"])
 def payment_success():
-    # Lấy tất cả tham số VNPay gửi về
-    query_params = request.args.to_dict()
-    
-    print("===== VNPAY CALLBACK =====")
-    print("FULL QUERY STRING:", request.query_string.decode())
-    print("ALL PARAMS:", query_params)
-    
-    # Lấy chữ ký VNPay gửi sang
-    vnp_SecureHash = query_params.get("vnp_SecureHash")
-    vnp_SecureHashType = query_params.get("vnp_SecureHashType", "")
-    
-    print("RECEIVED HASH:", vnp_SecureHash)
-    print("HASH TYPE:", vnp_SecureHashType)
-    
-    # Loại bỏ 2 tham số chữ ký trước khi tính toán lại
-    if "vnp_SecureHash" in query_params:
-        query_params.pop("vnp_SecureHash")
-    if "vnp_SecureHashType" in query_params:
-        query_params.pop("vnp_SecureHashType")
-    
-    # Sắp xếp theo key A-Z
-    sorted_params = sorted(query_params.items())
-    print("SORTED PARAMS:", sorted_params)
-    
-    # Tạo query string (THEO ĐÚNG ĐỊNH DẠNG URL ENCODE CỦA VNPAY)
-    query_string = "&".join([f"{k}={v}" for k, v in sorted_params])
-    
-    print("CALC SIGN STRING:", query_string)
-    
-    # Tính lại chữ ký
-    computed_hash = hmac.new(
-        vnp_HashSecret.encode('utf-8'),
-        query_string.encode('utf-8'),
-        hashlib.sha512
-    ).hexdigest()
-    
-    print("COMPUTED HASH:", computed_hash)
-    print("COMPARE:", computed_hash == vnp_SecureHash)
-    
-    if computed_hash != vnp_SecureHash:
-        return jsonify({"error": f"Sai chữ ký"}), 400
-    
-    # Xử lý đơn hàng ở đây
-    # Cập nhật trạng thái đơn hàng thành "paid"
-    
-    return jsonify({"message": "Xác thực thành công"})
+    data = request.get_json()
+
+    order_id = data.get("vnp_TxnRef")
+    response_code = data.get("vnp_ResponseCode")
+
+    if response_code == "00":
+
+        cursor.execute("""
+            UPDATE Orders
+            SET order_status = 'paid'
+            WHERE order_id = ?
+        """, (order_id,))
+
+        conn.commit()
+
+    return jsonify({"ok": True})
 
 @app.route("/api/forgot-password", methods=["POST"])
 def forgot_password():
@@ -1182,54 +1170,54 @@ def get_orders():
 
     return jsonify(orders)
 
-@app.route("/api/order-detail/<int:order_id>", methods=["GET"])
-def order_detail(order_id):
+# @app.route("/api/order/<int:order_id>", methods=["GET"])
+# def order_detail(order_id):
 
-    customer_id = session.get("customer_id")
+#     customer_id = session.get("customer_id")
 
-    if not customer_id:
-        return jsonify({"error": "chưa đăng nhập"}), 401
+#     if not customer_id:
+#         return jsonify({"error": "chưa đăng nhập"}), 401
 
-    conn = pyodbc.connect(
-        'DRIVER={SQL Server};'
-        f'SERVER={server};'
-        f'DATABASE={database};'
-        'Trusted_Connection=yes;'
-    )
+#     conn = pyodbc.connect(
+#         'DRIVER={SQL Server};'
+#         f'SERVER={server};'
+#         f'DATABASE={database};'
+#         'Trusted_Connection=yes;'
+#     )
 
-    cursor = conn.cursor()
+#     cursor = conn.cursor()
 
-    cursor.execute("""
-        SELECT od.order_detail_id,
-            product_name,
-            product_image,
-            discount_price,
-            qty,
-            subtotal
-        FROM OrderDetail od
-        JOIN Orders o ON od.order_id = o.order_id
-        WHERE od.order_id = ?
-        AND o.customer_id = ?
-    """, (order_id, customer_id))
+#     cursor.execute("""
+#         SELECT od.order_detail_id,
+#             product_name,
+#             product_image,
+#             discount_price,
+#             qty,
+#             subtotal
+#         FROM OrderDetail od
+#         JOIN Orders o ON od.order_id = o.order_id
+#         WHERE od.order_id = ?
+#         AND o.customer_id = ?
+#     """, (order_id, customer_id))
 
-    rows = cursor.fetchall()
+#     rows = cursor.fetchall()
 
-    result = []
+#     result = []
 
-    for row in rows:
+#     for row in rows:
 
-        result.append({
-            "order_detail_id": row[0],
-            "product_name": row[1],
-            "product_image": row[2],
-            "discount_price": float(row[3] or 0),
-            "qty": row[4],
-            "subtotal": float(row[5] or 0)
-        })
+#         result.append({
+#             "order_detail_id": row[0],
+#             "product_name": row[1],
+#             "product_image": row[2],
+#             "discount_price": float(row[3] or 0),
+#             "qty": row[4],
+#             "subtotal": float(row[5] or 0)
+#         })
 
-    conn.close()
+#     conn.close()
 
-    return jsonify(result)
+#     return jsonify(result)
 
 @app.route("/api/review", methods=["POST"])
 def review():
@@ -2070,6 +2058,7 @@ def update_order_status(order_id):
 
     data = request.get_json()
     status = data.get("order_status")
+    cancel_note = data.get("cancel_note")
 
     conn = pyodbc.connect(
         'DRIVER={SQL Server};'
@@ -2079,11 +2068,22 @@ def update_order_status(order_id):
     )
     cursor = conn.cursor()
 
-    cursor.execute("""
-        UPDATE Orders
-        SET order_status = ?
-        WHERE order_id = ?
-    """, (status, order_id))
+    if status == "cancelled":
+
+        cursor.execute("""
+            UPDATE Orders
+            SET order_status=?,
+                cancel_note=?
+            WHERE order_id=?
+        """, (status, cancel_note, order_id))
+
+    else:
+
+        cursor.execute("""
+            UPDATE Orders
+            SET order_status=?
+            WHERE order_id=?
+        """, (status, order_id))
 
     conn.commit()
     conn.close()
@@ -2256,6 +2256,150 @@ def top_products():
     conn.close()
 
     return jsonify(data)
+
+@app.route("/api/order-detail/<int:order_id>")
+def order_detail(order_id):
+
+    conn = pyodbc.connect(
+        'DRIVER={SQL Server};'
+        f'SERVER={server};'
+        f'DATABASE={database};'
+        'Trusted_Connection=yes;'
+    )
+
+    cursor = conn.cursor()
+
+    cursor.execute("""
+        SELECT
+            o.order_id,
+            o.order_status,
+            o.total_price,
+            o.created_at,
+            o.cancel_note,
+
+            a.receiver_name,
+            a.phone_number,
+            a.address
+
+        FROM Orders o
+
+        LEFT JOIN Address a
+            ON o.address_id = a.address_id
+
+        WHERE o.order_id = ?
+    """, (order_id,))
+
+    order = cursor.fetchone()
+
+    cursor.execute("""
+        SELECT
+            order_detail_id,
+            product_name,
+            product_image,
+            product_price,
+            discount_price,
+            qty,
+            subtotal
+        FROM OrderDetail
+        WHERE order_id = ?
+    """, (order_id,))
+
+    rows = cursor.fetchall()
+
+    details = []
+
+    for row in rows:
+
+        details.append({
+            "order_detail_id": row.order_detail_id,
+            "product_name": row.product_name,
+            "product_image": row.product_image,
+            "product_price": float(row.product_price),
+            "discount_price": float(row.discount_price),
+            "qty": row.qty,
+            "subtotal": float(row.subtotal)
+        })
+
+    conn.close()
+
+    return jsonify({
+    "order": {
+        "order_id": order.order_id,
+        "order_status": order.order_status,
+        "total_price": float(order.total_price),
+        "created_at": str(order.created_at),
+        "cancel_note": str(order.cancel_note),
+
+        "receiver_name": order.receiver_name,
+        "phone_number": order.phone_number,
+        "address": order.address
+    },
+
+    "details": details,
+})
+
+@app.route("/api/order/cancel/<int:order_id>", methods=["PUT"])
+def cancel_order(order_id):
+    customer_id = session.get("customer_id")
+
+    cursor.execute("""
+        UPDATE Orders
+        SET order_status = 'cancelled'
+        WHERE order_id = ?
+        AND customer_id = ?
+        AND order_status IN ('pending','paid')
+    """, (order_id, customer_id))
+
+    conn.commit()
+    conn.close()
+
+    return jsonify({
+        "message": "Cập nhật thành công"
+    })
+
+@app.route("/api/admin/transactions")
+def transactions():
+
+    conn = pyodbc.connect(
+        'DRIVER={SQL Server};'
+        f'SERVER={server};'
+        f'DATABASE={database};'
+        'Trusted_Connection=yes;'
+    )
+
+    cursor = conn.cursor()
+
+    cursor.execute("""
+        SELECT
+            o.order_id,
+            c.full_name,
+            o.total_price,
+            o.order_status,
+            o.created_at
+        FROM Orders o
+        LEFT JOIN Customer c
+            ON o.customer_id = c.customer_id
+        ORDER BY o.created_at ASC
+    """)
+
+    rows = cursor.fetchall()
+
+    orders = []
+
+    for row in rows:
+        orders.append({
+            "order_id": row.order_id,
+            "full_name": row.full_name,
+            "total_price": float(row.total_price),
+            "order_status": row.order_status,
+            "order_date": row.created_at
+        })
+
+    conn.close()
+
+    print(orders)
+
+    return jsonify(orders)
 
 if __name__ == "__main__":
     app.run(host='localhost', port=5000, debug=True, use_reloader=False, threaded=True) 

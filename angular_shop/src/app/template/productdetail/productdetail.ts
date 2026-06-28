@@ -1,7 +1,7 @@
 import { CommonModule } from '@angular/common';
 import { HttpClient } from '@angular/common/http';
 import { Component, OnInit, signal, ChangeDetectorRef } from '@angular/core';
-import { ActivatedRoute, RouterModule } from '@angular/router';
+import { ActivatedRoute, Router, RouterModule } from '@angular/router';
 import { environment } from '../../../environments/environment';
 import { CartService } from '../services/cart';
 
@@ -24,6 +24,8 @@ export class Productdetail implements OnInit {
 
   reviews = signal<any[]>([]);
 
+  mouseProducts = signal<any[]>([]);
+
 
 
   environment = environment
@@ -32,7 +34,8 @@ export class Productdetail implements OnInit {
     private route: ActivatedRoute,
     private http: HttpClient,
     private cartService: CartService,
-    private cdr: ChangeDetectorRef
+    private cdr: ChangeDetectorRef,
+    private router: Router
   ) { }
 
   ngOnInit(): void {
@@ -71,6 +74,12 @@ export class Productdetail implements OnInit {
 
     });
 
+    this.http.get<any[]>(
+      `${environment.apiUrl}/api/products/menu/7`
+    ).subscribe(res => {
+      this.mouseProducts.set(res);
+    });
+
   }
 
   getReviews(productId: number) {
@@ -92,5 +101,10 @@ export class Productdetail implements OnInit {
       .subscribe(res => {
         console.log("Added:", res);
       });
+  }
+
+  viewDetail(product: any) {
+    this.router.navigate(['/product', product.product_id]);
+    console.log('CLICK OK', product);
   }
 }

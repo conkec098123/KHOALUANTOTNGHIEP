@@ -14,6 +14,7 @@ import { CartService } from '../services/cart';
 
 export class Login {
   username = '';
+  email = '';
   password = '';
 
   constructor(
@@ -32,7 +33,7 @@ export class Login {
   login() {
 
     const formData = {
-      username: this.username,
+      email: this.email,
       password: this.password
     };
 

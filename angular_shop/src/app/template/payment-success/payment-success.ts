@@ -13,16 +13,37 @@ import { CartService } from '../services/cart';
 })
 export class PaymentSuccess {
 
-  constructor(private http: HttpClient,
+  constructor(
+    private http: HttpClient,
     private route: ActivatedRoute,
     private router: Router,
-    private cartService: CartService) { }
+    private cartService: CartService
+  ) { }
 
   ngOnInit() {
+  this.route.queryParams.subscribe(params => {
 
-    console.log("Thanh toán thành công");
+    console.log("VNPAY PARAMS:", params);
 
-  }
+    this.http.post(
+      `${environment.apiUrl}/api/payment-success`,
+      params
+    ).subscribe({
+      next: (res) => {
+        console.log("PAYMENT OK:", res);
+
+        // xóa cart chỉ khi backend xác nhận OK
+        this.cartService.cart.set([]);
+        localStorage.removeItem("cart");
+      },
+
+      error: (err) => {
+        console.log("PAYMENT ERROR:", err);
+      }
+    });
+
+  });
+}
   gotohome() {
     this.http.get<any>(`${environment.apiUrl}/api/current-user`,
       { withCredentials: true }

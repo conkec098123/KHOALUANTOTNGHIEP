@@ -54,12 +54,6 @@ setPeriod(type: string) {
       );
     }
 
-    if (this.search) {
-    data = data.filter(x =>
-      x.order_id.toString().includes(this.search)
-    );
-  }
-
   const now = new Date();
 
   data = data.filter(x => {
