@@ -20,12 +20,12 @@
             <button class="btn btn-light" (click)="toggleDropdown()">
               <div class="d-flex align-items-center me-3">
 
-    <img 
-      [src]="environment.apiUrl + '/' + cartService.user()?.avatar"
-      class="rounded-circle me-2"
-      width="40"
-      height="40"
-      style="object-fit: cover;">
+    <img
+  [src]="getAvatarUrl(cartService.user()?.avatar)"
+  class="rounded-circle me-2"
+  width="40"
+  height="40"
+  style="object-fit: cover;">
 
     <span>Welcome {{ cartService.user()?.full_name }}</span>
 

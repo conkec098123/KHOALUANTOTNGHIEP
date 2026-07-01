@@ -17,6 +17,7 @@ export class AddProduct {
     price: 0,
     discount_price: 0,
     qty: 0,
+    color: '',
     menu_id: null,
     is_active: true
   };
@@ -162,6 +163,6 @@ export class AddProduct {
       .subscribe(res => {
         console.log('attributes:', res);
         this.attributes.set(res);
-      });
+      }); 
   }
 }

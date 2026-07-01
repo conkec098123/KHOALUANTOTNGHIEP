@@ -1,7 +1,7 @@
 import { HttpClient } from '@angular/common/http';
 import { Component, effect, OnInit, signal } from '@angular/core';
 import { Router, RouterLink, RouterOutlet } from '@angular/router';
-import { environment } from '../environments/environment';
+import { environment, environmentgoogle } from '../environments/environment';
 import { CartService } from './template/services/cart';
 import { SearchService } from './template/services/search';
 import { FormsModule } from '@angular/forms';
@@ -13,6 +13,8 @@ type FilterType = {
   ssd: number[];
   cpu: string[];
 };
+
+declare const google: any;
 
 
 @Component({
@@ -54,6 +56,8 @@ export class App implements OnInit{
       .subscribe({
         next: (user) => {
           this.cartService.user.set(user);
+          console.log(this.cartService.user());
+          console.log(user);
         },
         error: () => {
           this.cartService.user.set(null);
@@ -143,6 +147,19 @@ closeMenu() {
     this.router.navigate(['/brand-management'])
     this.closeMenu()
   }
+
+  getAvatarUrl(avatar: string | null): string {
+
+  if (!avatar) {
+    return 'assets/default-avatar.png';
+  }
+
+  if (avatar.startsWith('http')) {
+    return avatar;
+  }
+
+  return `${environment.apiUrl}/${avatar}`;
+}
 
   search() {
     console.log("SEARCH:", this.keyword);

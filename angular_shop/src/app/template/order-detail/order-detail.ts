@@ -64,4 +64,35 @@ export class OrderDetail {
   });
 
 }
+
+changeStatus(
+    orderId: number,
+    status: string,
+    cancel_note = ''
+  ) {
+
+    if (status === 'delivered') {
+
+    const confirmResult = confirm(
+      'Chỉ xác nhận nếu quý khách đã nhận hàng và đã kiểm tra đầy đủ. Bạn có chắc chắn?'
+    );
+
+    if (!confirmResult) return;
+  }
+
+    this.http.put(
+      `${environment.apiUrl}/api/admin/orders/${orderId}`,
+      {
+        order_status: status,
+        cancel_note: cancel_note
+      }
+    ).subscribe(() => {
+      this.order.update(order => ({
+      ...order,
+      order_status: status
+    }));
+
+  });
+
+  }
 }

@@ -7,11 +7,14 @@ import hashlib
 import hmac
 import urllib.parse
 from datetime import datetime, timedelta
+import requests
 import uuid
 import smtplib
 from email.mime.text import MIMEText
 import os
 from werkzeug.utils import secure_filename
+from google.auth.transport import requests as google_requests
+from google.oauth2 import id_token
 
 
 app = Flask(__name__, static_folder='static')
@@ -49,6 +52,134 @@ PRODUCT_IMAGE_FOLDER = os.path.join(
     "public",
     "images"
 )
+
+GOOGLE_CLIENT_ID = "768467404959-9s7f8pqmq1gn2650edl74jn4nvefom4h.apps.googleusercontent.com"
+
+@app.route("/google-login", methods=["POST"])
+def google_login():
+
+    data = request.get_json()
+    credential = data["credential"]
+
+    info = id_token.verify_oauth2_token(
+        credential,
+        google_requests.Request(),
+        GOOGLE_CLIENT_ID
+    )
+
+    google_id = info["sub"]
+    email = info["email"]
+    name = info["name"]
+    picture = info["picture"]
+
+    cursor.execute("""
+        SELECT customer_id, full_name, email, avatar, active
+        FROM Customer
+        WHERE google_id = ?
+    """, (google_id,))
+
+    customer = cursor.fetchone()
+
+    if customer:
+
+        if customer[4] == 0:
+            return jsonify({"message": "Tài khoản bị khóa"}), 403
+
+        session["customer_id"] = customer[0]
+        session["role"] = "customer"
+
+        return jsonify({
+            "id": customer[0],
+            "name": customer[1],
+            "role": "customer"
+        })
+
+    cursor.execute("""
+        SELECT customer_id, full_name, email, avatar, active
+        FROM Customer
+        WHERE email = ?
+    """, (email,))
+
+    customer = cursor.fetchone()
+
+    if customer:
+
+        if customer[4] == 0:
+            return jsonify({"message": "Tài khoản bị khóa"}), 403
+
+        avatar = customer[3]
+
+        if avatar is None:
+
+            response = requests.get(picture)
+
+            if response.status_code == 200:
+
+                filename = f"google_{uuid.uuid4()}.jpg"
+
+                filepath = os.path.join("static", "uploads", filename)
+
+                with open(filepath, "wb") as f:
+                    f.write(response.content)
+
+                avatar = f"static/uploads/{filename}"
+
+        cursor.execute("""
+            UPDATE Customer
+            SET google_id = ?, avatar = ?
+            WHERE email = ?
+        """, (google_id, avatar, email))
+
+        conn.commit()
+
+        session["customer_id"] = customer[0]
+        session["role"] = "customer"
+
+        return jsonify({
+            "id": customer[0],
+            "name": customer[1],
+            "role": "customer"
+        })
+
+    avatar = None
+
+    response = requests.get(picture)
+
+    if response.status_code == 200:
+
+        filename = f"google_{uuid.uuid4()}.jpg"
+
+        filepath = os.path.join("static", "uploads", filename)
+
+        with open(filepath, "wb") as f:
+            f.write(response.content)
+
+        avatar = f"static/uploads/{filename}"
+
+    cursor.execute("""
+        INSERT INTO Customer
+        (google_id, full_name, email, avatar, active)
+        VALUES (?, ?, ?, ?, 1)
+    """, (google_id, name, email, avatar))
+
+    conn.commit()
+
+    cursor.execute("""
+        SELECT customer_id, full_name
+        FROM Customer
+        WHERE google_id = ?
+    """, (google_id,))
+
+    customer = cursor.fetchone()
+
+    session["customer_id"] = customer[0]
+    session["role"] = "customer"
+
+    return jsonify({
+        "id": customer[0],
+        "name": customer[1],
+        "role": "customer"
+    })
 
 @app.route("/api/products")
 def api_products():
@@ -91,7 +222,7 @@ def current_user():
     'Trusted_Connection=yes;')
     cursor = conn.cursor()
 
-    print("SESSION:", session)
+    print("CURRENT USER SESSION:", dict(session))
     try:
 
         if "user_id" in session:
@@ -481,6 +612,7 @@ def add_product():
     qty = product.get("qty")
     menu_id = int(product.get("menu_id"))
     is_active = product["is_active"]
+    color = product.get("color")
     try:
         cursor.execute("""
             INSERT INTO Product (name, image, price, discount_price, qty, menu_id, is_active)
@@ -498,6 +630,23 @@ def add_product():
         print(row)
 
         product_id = row[0]
+
+        cursor.execute("""
+                INSERT INTO ProductVariant
+                (
+                    product_id,
+                    color,
+                    image,
+                    qty
+                )
+                VALUES (?, ?, ?, ?)
+            """,
+            (
+                product_id,
+                color,
+                image,
+                qty
+            ))
 
         for attr in attributes:
 
@@ -1278,6 +1427,18 @@ def get_product_detail(id):
 
     if not row:
         return jsonify({"message": "Product not found"}), 404
+    
+    cursor.execute("""
+        SELECT
+            product_id,
+            color,
+            image,
+            qty
+        FROM ProductVariant
+        WHERE product_id = ?
+    """, (id,))
+
+    variant = cursor.fetchone()
 
     # attributes
     cursor.execute("""
@@ -1310,6 +1471,8 @@ def get_product_detail(id):
         "price": float(row.price or 0),
         "discount_price": float(row.discount_price or 0),
         "image": row.image,
+
+        "color": variant.color if variant else "",
 
         "images": [img.image for img in images],
 
@@ -1559,6 +1722,25 @@ def get_product(product_id):
     }
 
     cursor.execute("""
+                SELECT
+                    product_id,
+                    color,
+                    image,
+                    qty
+                FROM ProductVariant
+                WHERE product_id = ?
+            """,
+            (
+                product_id,))
+    
+    variant = cursor.fetchone()
+
+    if variant:
+        product["color"] = variant.color
+    else:
+        product["color"] = ""       
+
+    cursor.execute("""
         SELECT
             a.attribute_id,
             a.name
@@ -1620,6 +1802,7 @@ def update_product(product_id):
         product = data.get("product", {})
         attributes = data.get("attributes", [])
         related = data.get("related", [])
+        color = product.get("color")
 
         conn = pyodbc.connect(
             'DRIVER={SQL Server};'
@@ -1651,6 +1834,39 @@ def update_product(product_id):
         product.get("is_active"),
         image,
         product_id)
+
+        cursor.execute(
+            "SELECT 1 FROM ProductVariant WHERE product_id=?",
+            (product_id,)
+        )
+
+        exists = cursor.fetchone()
+
+        if exists:
+            cursor.execute("""
+                    UPDATE ProductVariant
+                    SET color = ?,
+                        image = ?,
+                        qty = ?
+                    WHERE product_id =?
+                """,
+                (
+                    color,
+                    image,
+                    product.get("qty"),
+                    product_id
+                ))
+        else:
+            cursor.execute("""
+                    INSERT INTO ProductVariant
+                           (product_id, color, image, qty)
+                           VALUES(?, ?, ?, ?)
+                           """,(
+                               product_id,
+                               color,
+                               image,
+                               product.get("qty")
+                           ))
 
         # attributes reset
         cursor.execute("DELETE FROM ProductAttribute WHERE product_id=?", product_id)
@@ -1698,6 +1914,7 @@ def delete_product(product_id):
     try:
         # 1. xóa liên kết trước (quan trọng)
         cursor.execute("DELETE FROM ProductAttribute WHERE product_id=?", product_id)
+        cursor.execute("DELETE FROM ProductVariant WHERE product_id=?", product_id)
         cursor.execute("DELETE FROM ProductRelated WHERE product_id=?", product_id)
 
         # 2. xóa product
@@ -2068,22 +2285,82 @@ def update_order_status(order_id):
     )
     cursor = conn.cursor()
 
-    if status == "cancelled":
+    role = session.get("role")
 
-        cursor.execute("""
-            UPDATE Orders
-            SET order_status=?,
-                cancel_note=?
-            WHERE order_id=?
-        """, (status, cancel_note, order_id))
-
-    else:
+    # CUSTOMER chỉ được xác nhận delivered
+    if role == "customer":
+        if status != "delivered":
+            return jsonify({"message": "Forbidden"}), 403
 
         cursor.execute("""
             UPDATE Orders
             SET order_status=?
             WHERE order_id=?
         """, (status, order_id))
+
+    else:
+        # ADMIN
+        if status == "cancelled":
+            cursor.execute("""
+                UPDATE Orders
+                SET order_status=?,
+                    cancel_note=?
+                WHERE order_id=?
+            """, (status, cancel_note, order_id))
+        else:
+
+            if status == "shipping":
+                cursor.execute("""
+                    SELECT
+                        product_id,
+                        qty
+                    FROM OrderDetail
+                    WHERE order_id = ?
+                            """, (order_id,))
+                row = cursor.fetchall()
+
+                if not row:
+                    return jsonify({"lỗi": "không tìm thấy sản phẩm"}), 401
+                
+                for p in row:
+                    product_id = p.product_id
+                    order_qty = p.qty
+
+                    cursor.execute("""
+                        SELECT qty
+                        FROM Product
+                        WHERE product_id = ?
+                                """,(product_id,))
+                    
+                    product = cursor.fetchone()
+                    if not product: 
+                        conn.rollback()
+                        return jsonify({"message": "Không tìm thấy sản phẩm."}), 404
+                    stock_qty = product[0]
+
+                    if stock_qty < order_qty:
+                    
+                        conn.rollback()
+
+                        return jsonify({
+                            "message": "Số lượng tồn kho không đủ để xuất hàng."
+                        }), 400
+                for p in row:    
+
+                    product_id = p.product_id
+                    order_qty = p.qty
+                    
+                    cursor.execute("""
+                        UPDATE Product
+                        SET qty = qty - ?
+                        WHERE product_id = ?
+                                """,(order_qty, product_id,))
+                    
+                cursor.execute("""
+                    UPDATE Orders
+                    SET order_status='shipping'
+                    WHERE order_id=?
+                            """,(order_id,))
 
     conn.commit()
     conn.close()
