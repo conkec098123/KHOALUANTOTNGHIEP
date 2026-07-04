@@ -990,7 +990,10 @@ def payment_success():
 
         conn.commit()
 
-    return jsonify({"ok": True})
+    return jsonify({
+    "ok": True,
+    "order_id": order_id
+})
 
 @app.route("/api/forgot-password", methods=["POST"])
 def forgot_password():
@@ -2569,6 +2572,20 @@ def order_detail(order_id):
     order = cursor.fetchone()
 
     cursor.execute("""
+            SELECT
+                c.customer_code,
+                c.full_name,
+                c.email,
+                c.phone_number
+            FROM Orders o
+            JOIN Customer c
+            ON o.customer_id = c.customer_id
+            WHERE o.order_id = ?
+                   """,(order_id,))
+    
+    customer = cursor.fetchone()
+
+    cursor.execute("""
         SELECT
             order_detail_id,
             product_name,
@@ -2610,6 +2627,12 @@ def order_detail(order_id):
         "receiver_name": order.receiver_name,
         "phone_number": order.phone_number,
         "address": order.address
+    },
+    "customer": {
+        "customer_code": customer.customer_code,
+        "full_name": customer.full_name,
+        "email": customer.email,
+        "phone_number": customer.phone_number
     },
 
     "details": details,

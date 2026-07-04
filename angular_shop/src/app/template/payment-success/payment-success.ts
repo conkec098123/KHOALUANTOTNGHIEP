@@ -20,30 +20,37 @@ export class PaymentSuccess {
     private cartService: CartService
   ) { }
 
+  details = signal<any[]>([]);
+  order = signal<any>(null);
+
   ngOnInit() {
-  this.route.queryParams.subscribe(params => {
+    this.route.queryParams.subscribe(params => {
 
-    console.log("VNPAY PARAMS:", params);
+      console.log("VNPAY PARAMS:", params);
 
-    this.http.post(
-      `${environment.apiUrl}/api/payment-success`,
-      params
-    ).subscribe({
-      next: (res) => {
-        console.log("PAYMENT OK:", res);
+      this.http.post<any>(
+        `${environment.apiUrl}/api/payment-success`,
+        params
+      ).subscribe({
+        next: (res) => {
 
-        // xóa cart chỉ khi backend xác nhận OK
-        this.cartService.cart.set([]);
-        localStorage.removeItem("cart");
-      },
+          this.cartService.cart.set([]);
+          localStorage.removeItem("cart");
 
-      error: (err) => {
-        console.log("PAYMENT ERROR:", err);
-      }
+          this.http.get<any>(
+            `${environment.apiUrl}/api/order-detail/${res.order_id}`
+          ).subscribe(detail => {
+
+            this.order.set(detail.order);
+            this.details.set(detail.details);
+
+          });
+        }
+      })
+
     });
 
-  });
-}
+  }
   gotohome() {
     this.http.get<any>(`${environment.apiUrl}/api/current-user`,
       { withCredentials: true }
